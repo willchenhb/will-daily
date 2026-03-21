@@ -19,6 +19,7 @@ export default function Editor({ content, onChange, placeholder = '写点什么.
     ],
     content,
     editable,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
     },
