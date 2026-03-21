@@ -25,3 +25,16 @@ body {
     text-wrap: balance;
   }
 }
+
+.font-content {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.main-content {
+  margin-left: 180px;
+  transition: margin-left 0.2s;
+}
+
+body.sidebar-collapsed .main-content {
+  margin-left: 56px;
+}
