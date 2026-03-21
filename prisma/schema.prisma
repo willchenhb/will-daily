@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model DiaryEntry {
+  id        Int      @id @default(autoincrement())
+  date      String   @unique // YYYY-MM-DD
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WeeklyPlan {
+  id        Int        @id @default(autoincrement())
+  weekStart String     @unique // YYYY-MM-DD (Monday)
+  title     String?
+  content   String?    // Weekly reflection HTML
+  todos     TodoItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model TodoItem {
+  id           Int        @id @default(autoincrement())
+  weeklyPlanId Int
+  weeklyPlan   WeeklyPlan @relation(fields: [weeklyPlanId], references: [id], onDelete: Cascade)
+  text         String
+  completed    Boolean    @default(false)
+  order        Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([weeklyPlanId])
+}
+
+model Note {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  category  String?  // Lowercase, trimmed
+  summary   String?  // AI-generated
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
