@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import { useState, useCallback, useEffect, useRef } from 'react'
 
 interface EditorProps {
   content: string
@@ -11,7 +12,31 @@ interface EditorProps {
   editable?: boolean
 }
 
-export default function Editor({ content, onChange, placeholder = '写点什么...', editable = true }: EditorProps) {
+const SLASH_COMMANDS = [
+  { label: '标题 1', icon: 'H1', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().toggleHeading({ level: 1 }).run() },
+  { label: '标题 2', icon: 'H2', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().toggleHeading({ level: 2 }).run() },
+  { label: '标题 3', icon: 'H3', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().toggleHeading({ level: 3 }).run() },
+  { label: '无序列表', icon: '•', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().toggleBulletList().run() },
+  { label: '有序列表', icon: '1.', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().toggleOrderedList().run() },
+  { label: '引用', icon: '❝', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().toggleBlockquote().run() },
+  { label: '代码块', icon: '<>', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().toggleCodeBlock().run() },
+  { label: '分割线', icon: '—', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().setHorizontalRule().run() },
+]
+
+export default function Editor({ content, onChange, placeholder = '输入 / 插入内容...', editable = true }: EditorProps) {
+  const [showSlash, setShowSlash] = useState(false)
+  const [slashFilter, setSlashFilter] = useState('')
+  const [slashIndex, setSlashIndex] = useState(0)
+  const [slashPos, setSlashPos] = useState<{ top: number; left: number } | null>(null)
+  const [bubblePos, setBubblePos] = useState<{ top: number; left: number } | null>(null)
+  const [showBubble, setShowBubble] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  const filteredCommands = SLASH_COMMANDS.filter(cmd =>
+    cmd.label.toLowerCase().includes(slashFilter)
+  )
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -22,52 +47,157 @@ export default function Editor({ content, onChange, placeholder = '写点什么.
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
+
+      const { from } = editor.state.selection
+      const textBefore = editor.state.doc.textBetween(
+        Math.max(0, from - 20), from, '\n'
+      )
+      const slashMatch = textBefore.match(/\/([^\s/]*)$/)
+
+      if (slashMatch) {
+        setSlashFilter(slashMatch[1].toLowerCase())
+        setShowSlash(true)
+        setSlashIndex(0)
+        const coords = editor.view.coordsAtPos(from)
+        const editorRect = editor.view.dom.getBoundingClientRect()
+        setSlashPos({
+          top: coords.bottom - editorRect.top + 4,
+          left: coords.left - editorRect.left,
+        })
+      } else {
+        setShowSlash(false)
+      }
+    },
+    onSelectionUpdate: ({ editor }) => {
+      const { from, to } = editor.state.selection
+      if (from === to || !editable) {
+        setShowBubble(false)
+        return
+      }
+      // Show bubble menu above selection
+      const coords = editor.view.coordsAtPos(from)
+      const endCoords = editor.view.coordsAtPos(to)
+      const editorRect = editor.view.dom.getBoundingClientRect()
+      setBubblePos({
+        top: coords.top - editorRect.top - 40,
+        left: (coords.left + endCoords.left) / 2 - editorRect.left - 80,
+      })
+      setShowBubble(true)
     },
     editorProps: {
       attributes: {
         class: 'font-content prose prose-sm max-w-none focus:outline-none min-h-[60px] text-gray-700 leading-relaxed',
       },
+      handleKeyDown: (_view, event) => {
+        if (!showSlash) return false
+        if (event.key === 'ArrowDown') {
+          event.preventDefault()
+          setSlashIndex(prev => Math.min(prev + 1, filteredCommands.length - 1))
+          return true
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault()
+          setSlashIndex(prev => Math.max(prev - 1, 0))
+          return true
+        }
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          executeSlashCommand(slashIndex)
+          return true
+        }
+        if (event.key === 'Escape') {
+          setShowSlash(false)
+          return true
+        }
+        return false
+      },
     },
   })
+
+  const executeSlashCommand = useCallback((index: number) => {
+    if (!editor || !filteredCommands[index]) return
+    const { from } = editor.state.selection
+    const textBefore = editor.state.doc.textBetween(
+      Math.max(0, from - 20), from, '\n'
+    )
+    const slashMatch = textBefore.match(/\/([^\s/]*)$/)
+    if (slashMatch) {
+      editor.chain().focus()
+        .deleteRange({ from: from - slashMatch[0].length, to: from })
+        .run()
+    }
+    filteredCommands[index].action(editor)
+    setShowSlash(false)
+  }, [editor, filteredCommands])
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowSlash(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   if (!editor) return null
 
   return (
-    <div className="border border-dashed border-[#c5d9c5] rounded-md p-3">
-      {editable && (
-        <div className="flex gap-1 mb-2 border-b border-gray-100 pb-2">
+    <div className="relative rounded-md p-1" ref={wrapperRef}>
+      {/* Floating bubble toolbar on text selection */}
+      {showBubble && bubblePos && editable && (
+        <div
+          className="absolute z-50 flex items-center gap-0.5 bg-gray-800 rounded-lg shadow-lg px-1 py-0.5"
+          style={{ top: bubblePos.top, left: bubblePos.left }}
+        >
           <button
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`px-2 py-1 text-xs rounded ${editor.isActive('bold') ? 'bg-[#eef5ee] text-[#3a7a4f]' : 'text-gray-400 hover:bg-gray-50'}`}
-          >
-            B
-          </button>
+            onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleBold().run() }}
+            className={`px-2 py-1 text-xs rounded font-bold ${editor.isActive('bold') ? 'text-white bg-gray-600' : 'text-gray-300 hover:text-white'}`}
+          >B</button>
           <button
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`px-2 py-1 text-xs rounded italic ${editor.isActive('italic') ? 'bg-[#eef5ee] text-[#3a7a4f]' : 'text-gray-400 hover:bg-gray-50'}`}
-          >
-            I
-          </button>
+            onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }}
+            className={`px-2 py-1 text-xs rounded italic ${editor.isActive('italic') ? 'text-white bg-gray-600' : 'text-gray-300 hover:text-white'}`}
+          >I</button>
           <button
-            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-            className={`px-2 py-1 text-xs rounded ${editor.isActive('heading', { level: 3 }) ? 'bg-[#eef5ee] text-[#3a7a4f]' : 'text-gray-400 hover:bg-gray-50'}`}
-          >
-            H
-          </button>
+            onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleStrike().run() }}
+            className={`px-2 py-1 text-xs rounded line-through ${editor.isActive('strike') ? 'text-white bg-gray-600' : 'text-gray-300 hover:text-white'}`}
+          >S</button>
+          <div className="w-px h-4 bg-gray-600 mx-0.5" />
           <button
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`px-2 py-1 text-xs rounded ${editor.isActive('bulletList') ? 'bg-[#eef5ee] text-[#3a7a4f]' : 'text-gray-400 hover:bg-gray-50'}`}
-          >
-            &bull;
-          </button>
+            onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }}
+            className={`px-2 py-1 text-xs rounded ${editor.isActive('heading', { level: 2 }) ? 'text-white bg-gray-600' : 'text-gray-300 hover:text-white'}`}
+          >H</button>
           <button
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={`px-2 py-1 text-xs rounded ${editor.isActive('orderedList') ? 'bg-[#eef5ee] text-[#3a7a4f]' : 'text-gray-400 hover:bg-gray-50'}`}
-          >
-            1.
-          </button>
+            onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleCode().run() }}
+            className={`px-2 py-1 text-xs rounded font-mono ${editor.isActive('code') ? 'text-white bg-gray-600' : 'text-gray-300 hover:text-white'}`}
+          >{'<>'}</button>
         </div>
       )}
+
+      {/* Slash command menu */}
+      {showSlash && filteredCommands.length > 0 && slashPos && (
+        <div
+          ref={menuRef}
+          className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-48"
+          style={{ top: slashPos.top, left: slashPos.left }}
+        >
+          <div className="px-2 py-1 text-[10px] text-gray-400 uppercase tracking-wider">插入内容</div>
+          {filteredCommands.map((cmd, i) => (
+            <button
+              key={cmd.label}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-left transition-colors ${
+                i === slashIndex ? 'bg-[#eef5ee] text-[#3a7a4f]' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+              onMouseEnter={() => setSlashIndex(i)}
+              onMouseDown={e => { e.preventDefault(); executeSlashCommand(i) }}
+            >
+              <span className="w-6 text-center text-[11px] text-gray-400">{cmd.icon}</span>
+              <span>{cmd.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <EditorContent editor={editor} />
     </div>
   )

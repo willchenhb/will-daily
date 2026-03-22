@@ -18,6 +18,7 @@ export default function NotesPage() {
   const [notes, setNotes] = useState<NoteItem[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [hasApiKey, setHasApiKey] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const router = useRouter()
 
@@ -34,8 +35,15 @@ export default function NotesPage() {
     setCategories(data)
   }, [])
 
+  const checkApiKey = useCallback(async () => {
+    const res = await fetch('/api/settings')
+    if (!res.ok) return
+    const data = await res.json()
+    setHasApiKey(data.ai_api_key_set === 'true')
+  }, [])
+
   useEffect(() => { fetchNotes() }, [fetchNotes])
-  useEffect(() => { fetchCategories() }, [fetchCategories])
+  useEffect(() => { fetchCategories(); checkApiKey() }, [fetchCategories, checkApiKey])
 
   const handleCreate = async () => {
     try {
@@ -87,7 +95,7 @@ export default function NotesPage() {
 
       <div className="flex flex-col gap-3">
         {notes.map(note => (
-          <NoteCard key={note.id} {...note} />
+          <NoteCard key={note.id} {...note} hasApiKey={hasApiKey} onSummaryGenerated={fetchNotes} />
         ))}
         {notes.length === 0 && (
           <div className="text-center text-gray-300 text-sm py-12">暂无笔记</div>

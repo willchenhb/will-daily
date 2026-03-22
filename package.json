@@ -13,6 +13,7 @@
     "@prisma/adapter-better-sqlite3": "^7.5.0",
     "@prisma/adapter-libsql": "^7.5.0",
     "@prisma/client": "^7.5.0",
+    "@tiptap/extension-bubble-menu": "^3.20.4",
     "@tiptap/extension-placeholder": "^3.20.4",
     "@tiptap/pm": "^3.20.4",
     "@tiptap/react": "^3.20.4",
