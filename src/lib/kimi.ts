@@ -61,11 +61,18 @@ export async function analyzeArticle(content: string): Promise<ArticleAnalysis> 
     messages: [
       {
         role: 'system',
-        content: `你是一个文章分析助手。请对以下文章进行分析，返回 JSON 格式：
+        content: `你是一个文章速读助手。请对以下文章进行深度分析，返回 JSON 格式：
 {
-  "summary": "200字以内的中文摘要，提取核心观点和关键信息",
+  "summary": "详细的速读内容，使用 Markdown 格式",
   "tags": ["标签1", "标签2", "标签3"]
 }
+
+速读要求：
+- 500-800字，让读者不用看原文也能掌握核心内容
+- 使用 Markdown 格式：**加粗**关键概念，用列表组织要点
+- 结构：先用1-2句话概括主旨，然后分点列出核心观点和关键细节
+- 保留重要的数据、案例和结论
+
 标签要求：3-5个，简短精炼（2-4个字），反映文章主题和领域。
 只返回 JSON，不要其他内容。`,
       },

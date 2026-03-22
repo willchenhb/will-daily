@@ -140,7 +140,7 @@ export default function CuratedDetailPage() {
             <span className="text-[13px] text-[#3a7a4f]">速读生成中...</span>
           </div>
         ) : article.summary ? (
-          <Markdown content={article.summary} className="text-[13px]" />
+          <Markdown content={article.summary} className="text-[13px] [&_*]:!text-gray-800" />
         ) : (
           <p className="text-[13px] text-gray-400 italic">暂无速读摘要</p>
         )}
