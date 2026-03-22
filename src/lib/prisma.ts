@@ -25,7 +25,7 @@ function createPrismaClient() {
   db.pragma('busy_timeout = 5000')
   db.close()
 
-  const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` })
+  const adapter = new PrismaBetterSqlite3({ url: dbPath })
   return new PrismaClient({ adapter })
 }
 
