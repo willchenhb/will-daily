@@ -47,6 +47,8 @@ model Note {
   summary   String?  // AI-generated
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([category])
 }
 
 model CuratedArticle {
@@ -60,6 +62,8 @@ model CuratedArticle {
   source    String?  // e.g. "wechat"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
 }
 
 model Setting {

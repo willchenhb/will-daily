@@ -6,12 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.2",
     "@prisma/adapter-better-sqlite3": "^7.5.0",
-    "@prisma/adapter-libsql": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@tiptap/extension-bubble-menu": "^3.20.4",
     "@tiptap/extension-placeholder": "^3.20.4",
