@@ -10,7 +10,7 @@ interface Plan {
   weekStart: string
   title: string | null
   content: string | null
-  todos: { id: number; text: string; completed: boolean; order: number }[]
+  todos: { id: number; text: string; completed: boolean; note: string | null; order: number }[]
 }
 
 function weekLabel(weekStart: string): string {

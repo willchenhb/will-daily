@@ -13,6 +13,7 @@ export async function PUT(
     data: {
       ...(body.text !== undefined && { text: body.text }),
       ...(body.completed !== undefined && { completed: body.completed }),
+      ...(body.note !== undefined && { note: body.note }),
       ...(body.order !== undefined && { order: body.order }),
     },
   })

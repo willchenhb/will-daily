@@ -8,6 +8,7 @@ interface Todo {
   id: number
   text: string
   completed: boolean
+  note: string | null
   order: number
 }
 
@@ -109,6 +110,7 @@ export default function WeeklyPlan({
             id={todo.id}
             text={todo.text}
             completed={todo.completed}
+            note={todo.note}
             weeklyPlanId={id!}
             onUpdate={onRefresh}
           />

@@ -31,6 +31,7 @@ model TodoItem {
   weeklyPlan   WeeklyPlan @relation(fields: [weeklyPlanId], references: [id], onDelete: Cascade)
   text         String
   completed    Boolean    @default(false)
+  note         String?    // Feedback/notes on completion
   order        Int
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
