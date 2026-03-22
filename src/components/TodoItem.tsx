@@ -100,15 +100,24 @@ export default function TodoItem({ id, text, completed, note, weeklyPlanId, onUp
           </span>
         )}
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Note indicator - always visible when has note */}
+        {note && !showNote && (
+          <button
+            onClick={() => setShowNote(true)}
+            className="text-[11px] text-[#3a7a4f] bg-[#eef5ee] px-2 py-0.5 rounded-full cursor-pointer hover:bg-[#ddf0dd] flex-shrink-0"
+          >
+            📝 有反馈
+          </button>
+        )}
+
+        {/* Action buttons - visible on hover */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           <button
             onClick={() => setShowNote(!showNote)}
-            className={`text-xs px-1.5 py-0.5 rounded ${
-              note ? 'text-[#3a7a4f]' : 'text-gray-300 hover:text-gray-500'
-            }`}
-            title="反馈笔记"
+            className="text-[11px] text-gray-300 hover:text-[#3a7a4f] px-1.5 py-0.5 rounded"
+            title="添加反馈"
           >
-            {note ? '📝' : '💬'}
+            💬
           </button>
           <button
             onClick={handleDelete}
@@ -117,19 +126,19 @@ export default function TodoItem({ id, text, completed, note, weeklyPlanId, onUp
             ✕
           </button>
         </div>
-
-        {/* Show note indicator when collapsed */}
-        {note && !showNote && (
-          <span
-            onClick={() => setShowNote(true)}
-            className="text-[10px] text-[#3a7a4f] cursor-pointer"
-          >
-            📝
-          </span>
-        )}
       </div>
 
-      {/* Note/feedback area */}
+      {/* Note preview when collapsed */}
+      {note && !showNote && (
+        <div
+          className="ml-[26px] mt-1 text-[12px] text-gray-400 cursor-pointer hover:text-gray-600 line-clamp-1"
+          onClick={() => setShowNote(true)}
+        >
+          {note}
+        </div>
+      )}
+
+      {/* Note/feedback edit area */}
       {showNote && (
         <div className="ml-[26px] mt-1.5 mb-1">
           <textarea
