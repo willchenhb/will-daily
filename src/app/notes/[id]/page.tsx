@@ -43,10 +43,14 @@ export default function NoteDetailPage() {
   }, [])
 
   const checkApiKey = useCallback(async () => {
-    const res = await fetch('/api/settings')
-    if (!res.ok) return
-    const settings = await res.json()
-    setHasApiKey(settings.ai_api_key_set === 'true')
+    try {
+      const res = await fetch('/api/settings')
+      if (!res.ok) return
+      const settings = await res.json()
+      setHasApiKey(settings.ai_api_key_set === 'true')
+    } catch {
+      // ignore
+    }
   }, [])
 
   useEffect(() => { fetchNote(); fetchCategories(); checkApiKey() }, [fetchNote, fetchCategories, checkApiKey])

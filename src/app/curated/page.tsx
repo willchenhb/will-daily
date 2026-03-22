@@ -32,7 +32,7 @@ function proxyImage(url: string | null): string | null {
 }
 
 function shortSummary(summary: string | null): string {
-  if (!summary || summary === '__generating__') return ''
+  if (!summary) return ''
   return summary.length > 100 ? summary.slice(0, 100) + '...' : summary
 }
 
@@ -57,13 +57,6 @@ export default function CuratedPage() {
 
   useEffect(() => { fetchArticles() }, [fetchArticles])
 
-  useEffect(() => {
-    const hasGenerating = articles.some(a => a.summary === '__generating__')
-    if (!hasGenerating) return
-    const timer = setInterval(fetchArticles, 3000)
-    return () => clearInterval(timer)
-  }, [articles, fetchArticles])
-
   const handleRefresh = async () => {
     setRefreshing(true)
     await fetchArticles()
@@ -83,7 +76,7 @@ export default function CuratedPage() {
         const err = await res.json()
         throw new Error(err.error || '添加失败')
       }
-      setToast({ message: '已收藏，速读生成中...', type: 'success' })
+      setToast({ message: '已收藏', type: 'success' })
       setUrl('')
       fetchArticles()
     } catch (e) {
@@ -110,7 +103,7 @@ export default function CuratedPage() {
           disabled={adding || !url.trim()}
           className="text-[13px] text-white bg-[#3a7a4f] hover:bg-[#2d6b3f] px-5 py-2.5 rounded-lg disabled:opacity-50 whitespace-nowrap"
         >
-          {adding ? '抓取中...' : '+ 收藏'}
+          {adding ? '收藏中...' : '+ 收藏'}
         </button>
         <button
           onClick={handleRefresh}
@@ -118,7 +111,7 @@ export default function CuratedPage() {
           className="text-[13px] text-gray-500 border border-gray-200 hover:bg-gray-50 px-3 py-2.5 rounded-lg disabled:opacity-50"
           title="刷新"
         >
-          {refreshing ? '⏳' : '🔄'}
+          {refreshing ? '...' : '刷新'}
         </button>
       </div>
 
@@ -168,12 +161,7 @@ export default function CuratedPage() {
               )}
 
               {/* Short summary */}
-              {article.summary === '__generating__' ? (
-                <div className="flex items-center gap-2">
-                  <span className="inline-block w-3 h-3 border-2 border-[#3a7a4f] border-t-transparent rounded-full animate-spin" />
-                  <span className="text-[12px] text-[#3a7a4f]">速读生成中...</span>
-                </div>
-              ) : article.summary ? (
+              {article.summary ? (
                 <div className="line-clamp-2">
                   <Markdown content={shortSummary(article.summary)} className="text-[12px] [&_*]:text-gray-500" />
                 </div>

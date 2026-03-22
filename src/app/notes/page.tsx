@@ -36,10 +36,14 @@ export default function NotesPage() {
   }, [])
 
   const checkApiKey = useCallback(async () => {
-    const res = await fetch('/api/settings')
-    if (!res.ok) return
-    const data = await res.json()
-    setHasApiKey(data.ai_api_key_set === 'true')
+    try {
+      const res = await fetch('/api/settings')
+      if (!res.ok) return
+      const data = await res.json()
+      setHasApiKey(data.ai_api_key_set === 'true')
+    } catch {
+      // ignore
+    }
   }, [])
 
   useEffect(() => { fetchNotes() }, [fetchNotes])

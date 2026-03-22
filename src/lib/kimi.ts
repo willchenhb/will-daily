@@ -3,12 +3,12 @@ import { prisma } from './prisma'
 
 async function getAISettings() {
   const settings = await prisma.setting.findMany({
-    where: { key: { in: ['ai_api_key', 'ai_model'] } },
+    where: { key: { in: ['ai_model'] } },
   })
   const map: Record<string, string> = {}
   for (const s of settings) map[s.key] = s.value
   return {
-    apiKey: map.ai_api_key || '',
+    apiKey: process.env.KIMI_API_KEY || '',
     model: map.ai_model || 'kimi-k2.5',
   }
 }
@@ -17,6 +17,8 @@ function createClient(apiKey: string) {
   return new OpenAI({
     apiKey,
     baseURL: 'https://api.moonshot.cn/v1',
+    timeout: 30_000,
+    maxRetries: 1,
   })
 }
 
@@ -27,7 +29,7 @@ function buildParams(model: string) {
 
 export async function generateSummary(content: string): Promise<string> {
   const settings = await getAISettings()
-  if (!settings.apiKey) throw new Error('未配置 API Key，请在设置页面配置')
+  if (!settings.apiKey) throw new Error('未配置 API Key，请在 .env.local 中设置 KIMI_API_KEY')
 
   const client = createClient(settings.apiKey)
   const plainText = content.replace(/<[^>]*>/g, '').slice(0, 8000)
@@ -51,7 +53,7 @@ export interface ArticleAnalysis {
 
 export async function analyzeArticle(content: string): Promise<ArticleAnalysis> {
   const settings = await getAISettings()
-  if (!settings.apiKey) throw new Error('未配置 API Key，请在设置页面配置')
+  if (!settings.apiKey) throw new Error('未配置 API Key，请在 .env.local 中设置 KIMI_API_KEY')
 
   const client = createClient(settings.apiKey)
   const plainText = content.replace(/<[^>]*>/g, '').slice(0, 8000)
