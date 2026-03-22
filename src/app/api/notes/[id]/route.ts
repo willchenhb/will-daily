@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { parseId, parseBody, badRequest, notFound } from '@/lib/api-utils'
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const id = parseInt(params.id)
+  const id = parseId(params.id)
+  if (id === null) return badRequest('Invalid id')
+
   const note = await prisma.note.findUnique({ where: { id } })
-  if (!note) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!note) return notFound('Note not found')
   return NextResponse.json(note)
 }
 
@@ -15,27 +18,45 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const id = parseInt(params.id)
-  const body = await request.json()
+  const id = parseId(params.id)
+  if (id === null) return badRequest('Invalid id')
 
-  const note = await prisma.note.update({
-    where: { id },
-    data: {
-      ...(body.title !== undefined && { title: body.title }),
-      ...(body.content !== undefined && { content: body.content }),
-      ...(body.category !== undefined && { category: body.category ? body.category.trim().toLowerCase() : null }),
-      ...(body.summary !== undefined && { summary: body.summary }),
-    },
-  })
+  const body = await parseBody(request)
+  if (!body) return badRequest('Invalid JSON body')
 
-  return NextResponse.json(note)
+  try {
+    const note = await prisma.note.update({
+      where: { id },
+      data: {
+        ...(body.title !== undefined && { title: body.title as string }),
+        ...(body.content !== undefined && { content: body.content as string }),
+        ...(body.category !== undefined && { category: body.category ? (body.category as string).trim().toLowerCase() : null }),
+        ...(body.summary !== undefined && { summary: body.summary as string }),
+      },
+    })
+    return NextResponse.json(note)
+  } catch (e: unknown) {
+    if (e && typeof e === 'object' && 'code' in e && e.code === 'P2025') {
+      return notFound('Note not found')
+    }
+    throw e
+  }
 }
 
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const id = parseInt(params.id)
-  await prisma.note.delete({ where: { id } })
-  return NextResponse.json({ ok: true })
+  const id = parseId(params.id)
+  if (id === null) return badRequest('Invalid id')
+
+  try {
+    await prisma.note.delete({ where: { id } })
+    return NextResponse.json({ ok: true })
+  } catch (e: unknown) {
+    if (e && typeof e === 'object' && 'code' in e && e.code === 'P2025') {
+      return notFound('Note not found')
+    }
+    throw e
+  }
 }

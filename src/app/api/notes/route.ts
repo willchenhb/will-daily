@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { parseBody, badRequest } from '@/lib/api-utils'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') || '1')
-  const size = parseInt(searchParams.get('size') || '20')
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1)
+  const size = Math.min(100, Math.max(1, parseInt(searchParams.get('size') || '20') || 20))
   const category = searchParams.get('category')
 
   const where = category ? { category } : {}
@@ -23,11 +24,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
-  const { title, content, category } = body
+  const body = await parseBody(request)
+  if (!body) return badRequest('Invalid JSON body')
+
+  const { title, content, category } = body as { title?: string; content?: string; category?: string }
 
   if (!title) {
-    return NextResponse.json({ error: 'title is required' }, { status: 400 })
+    return badRequest('title is required')
   }
 
   const note = await prisma.note.create({

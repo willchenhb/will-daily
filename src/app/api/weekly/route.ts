@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { parseBody, badRequest } from '@/lib/api-utils'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') || '1')
-  const size = parseInt(searchParams.get('size') || '10')
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1)
+  const size = Math.min(100, Math.max(1, parseInt(searchParams.get('size') || '10') || 10))
 
   const [plans, total] = await Promise.all([
     prisma.weeklyPlan.findMany({
@@ -20,15 +21,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
-  const { weekStart, title, content } = body
+  const body = await parseBody(request)
+  if (!body) return badRequest('Invalid JSON body')
+
+  const { weekStart, title, content } = body as { weekStart?: string; title?: string; content?: string }
 
   if (!weekStart) {
-    return NextResponse.json({ error: 'weekStart is required' }, { status: 400 })
+    return badRequest('weekStart is required')
   }
 
   const plan = await prisma.weeklyPlan.create({
-    data: { weekStart, title, content },
+    data: { weekStart, title: title || null, content: content || null },
     include: { todos: true },
   })
 

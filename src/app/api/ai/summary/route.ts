@@ -1,22 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateSummary } from '@/lib/kimi'
+import { parseBody, badRequest, notFound } from '@/lib/api-utils'
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
-  const { noteId } = body
+  const body = await parseBody(request)
+  if (!body) return badRequest('Invalid JSON body')
+
+  const { noteId } = body as { noteId?: number }
 
   if (!noteId) {
-    return NextResponse.json({ error: 'noteId is required' }, { status: 400 })
+    return badRequest('noteId is required')
   }
 
   const note = await prisma.note.findUnique({ where: { id: noteId } })
   if (!note) {
-    return NextResponse.json({ error: 'Note not found' }, { status: 404 })
+    return notFound('Note not found')
   }
 
   if (!note.content || note.content.replace(/<[^>]*>/g, '').trim().length === 0) {
-    return NextResponse.json({ error: '笔记内容为空' }, { status: 400 })
+    return badRequest('笔记内容为空')
   }
 
   try {
