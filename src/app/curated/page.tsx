@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Toast from '@/components/Toast'
 import Loading from '@/components/Loading'
@@ -42,24 +42,47 @@ function parseTags(tags: string | null): string[] {
   return tags.split(',').filter(Boolean)
 }
 
+const PAGE_SIZE = 20
+
 export default function CuratedPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [url, setUrl] = useState('')
   const [adding, setAdding] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const observerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  const fetchArticles = useCallback(async () => {
-    const res = await fetch('/api/curated')
-    if (!res.ok) { setLoading(false); return }
+  const fetchArticles = useCallback(async (pageNum = 1, append = false) => {
+    if (pageNum > 1) setLoadingMore(true)
+    const res = await fetch(`/api/curated?page=${pageNum}&size=${PAGE_SIZE}`)
+    if (!res.ok) { setLoading(false); setLoadingMore(false); return }
     const data = await res.json()
-    setArticles(data.articles)
+    setArticles(prev => append ? [...prev, ...data.articles] : data.articles)
+    setHasMore(data.articles.length === PAGE_SIZE && pageNum * PAGE_SIZE < data.total)
+    setPage(pageNum)
     setLoading(false)
+    setLoadingMore(false)
   }, [])
 
-  useEffect(() => { fetchArticles() }, [fetchArticles])
+  useEffect(() => { fetchArticles(1) }, [fetchArticles])
+
+  // Infinite scroll: load more when sentinel is visible
+  useEffect(() => {
+    if (!hasMore || loadingMore) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        fetchArticles(page + 1, true)
+      }
+    }, { threshold: 0.1 })
+    const el = observerRef.current
+    if (el) observer.observe(el)
+    return () => { if (el) observer.unobserve(el) }
+  }, [hasMore, loadingMore, page, fetchArticles])
 
   // Auto-refresh only for articles created in the last 2 minutes without summary
   useEffect(() => {
@@ -74,7 +97,7 @@ export default function CuratedPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await fetchArticles()
+    await fetchArticles(1)
     setRefreshing(false)
   }
 
@@ -93,7 +116,7 @@ export default function CuratedPage() {
       }
       setToast({ message: '已收藏', type: 'success' })
       setUrl('')
-      fetchArticles()
+      fetchArticles(1)
     } catch (e) {
       setToast({ message: e instanceof Error ? e.message : '添加失败', type: 'error' })
     }
@@ -193,7 +216,18 @@ export default function CuratedPage() {
         ))}
       </div>
 
-      {articles.length === 0 && (
+      {/* Infinite scroll sentinel */}
+      {hasMore && <div ref={observerRef} className="h-4" />}
+      {loadingMore && (
+        <div className="flex justify-center py-6">
+          <span className="inline-block w-5 h-5 border-2 border-[#3a7a4f] border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+      {!hasMore && articles.length > PAGE_SIZE && (
+        <div className="text-center text-gray-300 text-sm py-6">没有更多了</div>
+      )}
+
+      {articles.length === 0 && !loading && (
         <div className="text-center text-gray-300 text-sm py-16">
           粘贴微信文章链接，开始收藏精选内容
         </div>
