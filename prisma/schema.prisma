@@ -56,6 +56,7 @@ model CuratedArticle {
   image     String?  // Cover image URL
   content   String?  // Extracted article text
   summary   String?  // Kimi-generated summary
+  tags      String?  // Comma-separated auto-generated tags
   source    String?  // e.g. "wechat"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

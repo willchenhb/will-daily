@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Toast from '@/components/Toast'
 
 interface Article {
@@ -9,6 +10,7 @@ interface Article {
   title: string
   image: string | null
   summary: string | null
+  tags: string | null
   source: string | null
   createdAt: string
 }
@@ -28,12 +30,23 @@ function proxyImage(url: string | null): string | null {
   return `/api/proxy-image?url=${encodeURIComponent(url)}`
 }
 
+function shortSummary(summary: string | null): string {
+  if (!summary || summary === '__generating__') return ''
+  return summary.length > 100 ? summary.slice(0, 100) + '...' : summary
+}
+
+function parseTags(tags: string | null): string[] {
+  if (!tags) return []
+  return tags.split(',').filter(Boolean)
+}
+
 export default function CuratedPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [url, setUrl] = useState('')
   const [adding, setAdding] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const router = useRouter()
 
   const fetchArticles = useCallback(async () => {
     const res = await fetch('/api/curated')
@@ -43,7 +56,6 @@ export default function CuratedPage() {
 
   useEffect(() => { fetchArticles() }, [fetchArticles])
 
-  // Auto-refresh when there are generating articles
   useEffect(() => {
     const hasGenerating = articles.some(a => a.summary === '__generating__')
     if (!hasGenerating) return
@@ -79,27 +91,6 @@ export default function CuratedPage() {
     setAdding(false)
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('确定删除？')) return
-    await fetch(`/api/curated/${id}`, { method: 'DELETE' })
-    fetchArticles()
-  }
-
-  const handleResummary = async (id: number) => {
-    setToast({ message: '正在生成速读...', type: 'success' })
-    try {
-      const res = await fetch(`/api/curated/${id}`, { method: 'POST' })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error)
-      }
-      setToast({ message: '速读已更新', type: 'success' })
-      fetchArticles()
-    } catch (e) {
-      setToast({ message: `生成失败: ${e instanceof Error ? e.message : '未知错误'}`, type: 'error' })
-    }
-  }
-
   return (
     <div className="max-w-4xl mx-auto px-8 py-6">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -133,8 +124,12 @@ export default function CuratedPage() {
       {/* Article cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {articles.map(article => (
-          <div key={article.id} className="border border-gray-100 rounded-xl overflow-hidden hover:shadow-md transition-shadow group">
-            {/* Cover image via proxy */}
+          <div
+            key={article.id}
+            onClick={() => router.push(`/curated/${article.id}`)}
+            className="border border-gray-100 rounded-xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+          >
+            {/* Cover image */}
             {article.image && (
               <div className="h-40 overflow-hidden bg-gray-50">
                 <img
@@ -160,49 +155,28 @@ export default function CuratedPage() {
                 {article.title}
               </h3>
 
-              {/* Summary */}
+              {/* Tags */}
+              {parseTags(article.tags).length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {parseTags(article.tags).map(tag => (
+                    <span key={tag} className="text-[10px] bg-[#eef5ee] text-[#3a7a4f] px-1.5 py-0.5 rounded">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Short summary */}
               {article.summary === '__generating__' ? (
-                <div className="mb-3 flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <span className="inline-block w-3 h-3 border-2 border-[#3a7a4f] border-t-transparent rounded-full animate-spin" />
                   <span className="text-[12px] text-[#3a7a4f]">速读生成中...</span>
                 </div>
               ) : article.summary ? (
-                <div className="mb-3">
-                  <div className="text-[10px] text-[#3a7a4f] mb-1 font-medium">✦ 速读</div>
-                  <p className="text-[12px] text-gray-500 leading-relaxed line-clamp-4 font-content">
-                    {article.summary}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-[12px] text-gray-300 mb-3 italic">暂无速读摘要</p>
-              )}
-
-              {/* Actions */}
-              <div className="flex items-center justify-between">
-                <a
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] text-[#3a7a4f] hover:text-[#2d6b3f] font-medium"
-                  onClick={e => e.stopPropagation()}
-                >
-                  阅读原文 →
-                </a>
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleResummary(article.id)}
-                    className="text-[11px] text-gray-400 hover:text-[#3a7a4f]"
-                  >
-                    {article.summary && article.summary !== '__generating__' ? '重新速读' : '生成速读'}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(article.id)}
-                    className="text-[11px] text-gray-400 hover:text-red-400"
-                  >
-                    删除
-                  </button>
-                </div>
-              </div>
+                <p className="text-[12px] text-gray-400 leading-relaxed line-clamp-2 font-content">
+                  {shortSummary(article.summary)}
+                </p>
+              ) : null}
             </div>
           </div>
         ))}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { scrapeArticle } from '@/lib/scraper'
-import { generateSummary } from '@/lib/kimi'
+import { analyzeArticle } from '@/lib/kimi'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
   try {
     const meta = await scrapeArticle(url)
 
-    // Save article immediately, summary = "generating" as placeholder
     const article = await prisma.curatedArticle.create({
       data: {
         url,
@@ -48,13 +47,16 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Fire-and-forget: generate summary async
+    // Async: analyze article (summary + tags)
     if (meta.content) {
-      generateSummary(meta.content)
-        .then(summary => {
+      analyzeArticle(meta.content)
+        .then(result => {
           prisma.curatedArticle.update({
             where: { id: article.id },
-            data: { summary },
+            data: {
+              summary: result.summary,
+              tags: result.tags.join(','),
+            },
           }).catch(() => {})
         })
         .catch(() => {
