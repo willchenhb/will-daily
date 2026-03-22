@@ -49,6 +49,18 @@ model Note {
   updatedAt DateTime @updatedAt
 }
 
+model CuratedArticle {
+  id        Int      @id @default(autoincrement())
+  url       String   @unique
+  title     String
+  image     String?  // Cover image URL
+  content   String?  // Extracted article text
+  summary   String?  // Kimi-generated summary
+  source    String?  // e.g. "wechat"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Setting {
   id        Int      @id @default(autoincrement())
   key       String   @unique

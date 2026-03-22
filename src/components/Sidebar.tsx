@@ -8,6 +8,7 @@ const navItems = [
   { href: '/diary', icon: '📓', label: '日记' },
   { href: '/weekly', icon: '📋', label: '周记' },
   { href: '/notes', icon: '📝', label: '笔记' },
+  { href: '/curated', icon: '⭐', label: '精选' },
 ]
 
 export default function Sidebar() {
