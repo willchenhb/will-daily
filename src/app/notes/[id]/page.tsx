@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Editor from '@/components/Editor'
 import Toast from '@/components/Toast'
+import Markdown from '@/components/Markdown'
 
 interface NoteDetail {
   id: number
@@ -105,7 +106,7 @@ export default function NoteDetailPage() {
       {note.summary && (
         <div className="bg-[#f8faf8] border border-[#e0ebe0] rounded-lg p-3 mb-4">
           <div className="text-[10px] text-[#3a7a4f] mb-1">{'\u2726'} AI 摘要</div>
-          <div className="text-[13px] text-gray-600 leading-relaxed">{note.summary}</div>
+          <Markdown content={note.summary} className="text-[13px]" />
         </div>
       )}
 

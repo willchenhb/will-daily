@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Toast from '@/components/Toast'
+import Markdown from '@/components/Markdown'
 
 interface ArticleDetail {
   id: number
@@ -139,9 +140,7 @@ export default function CuratedDetailPage() {
             <span className="text-[13px] text-[#3a7a4f]">速读生成中...</span>
           </div>
         ) : article.summary ? (
-          <p className="text-[13px] text-gray-600 leading-relaxed font-content whitespace-pre-wrap">
-            {article.summary}
-          </p>
+          <Markdown content={article.summary} className="text-[13px]" />
         ) : (
           <p className="text-[13px] text-gray-400 italic">暂无速读摘要</p>
         )}
