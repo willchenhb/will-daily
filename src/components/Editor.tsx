@@ -10,6 +10,7 @@ interface EditorProps {
   onChange: (html: string) => void
   placeholder?: string
   editable?: boolean
+  onSave?: () => void
 }
 
 const SLASH_COMMANDS = [
@@ -23,7 +24,7 @@ const SLASH_COMMANDS = [
   { label: '分割线', icon: '—', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().setHorizontalRule().run() },
 ]
 
-export default function Editor({ content, onChange, placeholder = '输入 / 插入内容...', editable = true }: EditorProps) {
+export default function Editor({ content, onChange, placeholder = '输入 / 插入内容...', editable = true, onSave }: EditorProps) {
   const [showSlash, setShowSlash] = useState(false)
   const [slashFilter, setSlashFilter] = useState('')
   const [slashIndex, setSlashIndex] = useState(0)
@@ -32,6 +33,8 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
   const [showBubble, setShowBubble] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const onSaveRef = useRef(onSave)
+  onSaveRef.current = onSave
 
   const filteredCommands = SLASH_COMMANDS.filter(cmd =>
     cmd.label.toLowerCase().includes(slashFilter)
@@ -74,13 +77,15 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
         setShowBubble(false)
         return
       }
-      // Show bubble menu above selection
+      // Show bubble menu above selection, clamped to container bounds
       const coords = editor.view.coordsAtPos(from)
       const endCoords = editor.view.coordsAtPos(to)
       const editorRect = editor.view.dom.getBoundingClientRect()
+      const rawTop = coords.top - editorRect.top - 40
+      const rawLeft = (coords.left + endCoords.left) / 2 - editorRect.left - 80
       setBubblePos({
-        top: coords.top - editorRect.top - 40,
-        left: (coords.left + endCoords.left) / 2 - editorRect.left - 80,
+        top: Math.max(0, rawTop),
+        left: Math.max(0, Math.min(rawLeft, editorRect.width - 200)),
       })
       setShowBubble(true)
     },
@@ -89,6 +94,13 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
         class: 'font-content prose prose-sm max-w-none focus:outline-none min-h-[60px] text-gray-700 leading-relaxed',
       },
       handleKeyDown: (_view, event) => {
+        // Cmd/Ctrl+S shortcut
+        if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+          event.preventDefault()
+          onSaveRef.current?.()
+          return true
+        }
+
         if (!showSlash) return false
         if (event.key === 'ArrowDown') {
           event.preventDefault()
@@ -138,6 +150,18 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  // Cmd/Ctrl+S at document level for when editor is not focused
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        onSaveRef.current?.()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   if (!editor) return null

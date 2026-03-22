@@ -10,9 +10,10 @@ interface DiaryEntryProps {
   content: string
   isToday?: boolean
   onSave: (data: { id?: number; date: string; content: string }) => Promise<void>
+  onDelete?: (id: number) => Promise<void>
 }
 
-export default function DiaryEntry({ id, date, dateFormatted, content: initialContent, isToday, onSave }: DiaryEntryProps) {
+export default function DiaryEntry({ id, date, dateFormatted, content: initialContent, isToday, onSave, onDelete }: DiaryEntryProps) {
   const [content, setContent] = useState(initialContent)
   const [editing, setEditing] = useState(isToday && !id)
   const [saving, setSaving] = useState(false)
@@ -26,12 +27,20 @@ export default function DiaryEntry({ id, date, dateFormatted, content: initialCo
   }
 
   return (
-    <div className="mb-6">
+    <div className="mb-6 group">
       <div className="flex items-center justify-between mb-2">
         <span className="text-[11px] text-gray-400 tracking-wide">{dateFormatted}</span>
         <div className="flex items-center gap-2">
           {isToday && (
             <span className="text-[10px] text-white bg-[#3a7a4f] px-2 py-0.5 rounded">今天</span>
+          )}
+          {id && onDelete && (
+            <button
+              onClick={() => onDelete(id)}
+              className="text-[11px] text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              删除
+            </button>
           )}
           {!editing && (
             <button
@@ -46,7 +55,7 @@ export default function DiaryEntry({ id, date, dateFormatted, content: initialCo
 
       {editing ? (
         <div>
-          <Editor content={content} onChange={setContent} placeholder="写点什么..." />
+          <Editor content={content} onChange={setContent} placeholder="写点什么..." onSave={handleSave} />
           <div className="flex gap-2 mt-2 justify-end">
             <button
               onClick={() => { setEditing(false); setContent(initialContent) }}

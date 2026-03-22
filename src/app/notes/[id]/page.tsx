@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Editor from '@/components/Editor'
 import Toast from '@/components/Toast'
@@ -27,6 +27,10 @@ export default function NoteDetailPage() {
   const [hasApiKey, setHasApiKey] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
+  // Track dirty state for unsaved changes warning
+  const [isDirty, setIsDirty] = useState(false)
+  const savedValuesRef = useRef({ title: '', content: '', category: '' })
+
   const fetchNote = useCallback(async () => {
     const res = await fetch(`/api/notes/${id}`)
     if (!res.ok) { router.push('/notes'); return }
@@ -35,6 +39,8 @@ export default function NoteDetailPage() {
     setTitle(data.title)
     setContent(data.content)
     setCategory(data.category || '')
+    savedValuesRef.current = { title: data.title, content: data.content, category: data.category || '' }
+    setIsDirty(false)
   }, [id, router])
 
   const fetchCategories = useCallback(async () => {
@@ -55,6 +61,45 @@ export default function NoteDetailPage() {
 
   useEffect(() => { fetchNote(); fetchCategories(); checkApiKey() }, [fetchNote, fetchCategories, checkApiKey])
 
+  // Track dirty state
+  const handleTitleChange = (val: string) => {
+    setTitle(val)
+    setIsDirty(
+      val !== savedValuesRef.current.title ||
+      content !== savedValuesRef.current.content ||
+      category !== savedValuesRef.current.category
+    )
+  }
+
+  const handleContentChange = (val: string) => {
+    setContent(val)
+    setIsDirty(
+      title !== savedValuesRef.current.title ||
+      val !== savedValuesRef.current.content ||
+      category !== savedValuesRef.current.category
+    )
+  }
+
+  const handleCategoryChange = (val: string) => {
+    setCategory(val)
+    setIsDirty(
+      title !== savedValuesRef.current.title ||
+      content !== savedValuesRef.current.content ||
+      val !== savedValuesRef.current.category
+    )
+  }
+
+  // beforeunload warning for unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -64,6 +109,8 @@ export default function NoteDetailPage() {
         body: JSON.stringify({ title, content, category: category || null }),
       })
       setToast({ message: '已保存', type: 'success' })
+      savedValuesRef.current = { title, content, category }
+      setIsDirty(false)
       fetchNote()
     } catch {
       setToast({ message: '保存失败', type: 'error' })
@@ -116,7 +163,7 @@ export default function NoteDetailPage() {
 
       <input
         value={title}
-        onChange={e => setTitle(e.target.value)}
+        onChange={e => handleTitleChange(e.target.value)}
         className="w-full text-xl font-semibold text-gray-800 border-none outline-none mb-2 bg-transparent"
         placeholder="标题"
       />
@@ -124,7 +171,7 @@ export default function NoteDetailPage() {
       <div className="mb-4">
         <input
           value={category}
-          onChange={e => setCategory(e.target.value)}
+          onChange={e => handleCategoryChange(e.target.value)}
           list="category-suggestions"
           placeholder="分类（可选）"
           className="text-[12px] text-gray-500 border border-gray-100 rounded px-2 py-1 outline-none bg-transparent"
@@ -134,7 +181,7 @@ export default function NoteDetailPage() {
         </datalist>
       </div>
 
-      <Editor content={content} onChange={setContent} placeholder="开始写笔记..." />
+      <Editor content={content} onChange={handleContentChange} placeholder="开始写笔记..." onSave={handleSave} />
 
       <div className="flex justify-between items-center mt-4">
         <div className="flex gap-2">
