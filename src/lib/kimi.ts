@@ -17,7 +17,7 @@ function createClient(apiKey: string) {
   return new OpenAI({
     apiKey,
     baseURL: 'https://api.moonshot.cn/v1',
-    timeout: 30_000,
+    timeout: 120_000,
     maxRetries: 1,
   })
 }
