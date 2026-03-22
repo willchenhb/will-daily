@@ -38,3 +38,11 @@ body {
 body.sidebar-collapsed .main-content {
   margin-left: 56px;
 }
+
+/* 移动端 main-content 无 margin */
+@media (max-width: 767px) {
+  .main-content {
+    margin-left: 0 !important;
+    padding-top: 56px; /* 给顶栏留空间 */
+  }
+}

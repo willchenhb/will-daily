@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import WeeklyPlan from '@/components/WeeklyPlan'
 import Toast from '@/components/Toast'
+import Loading from '@/components/Loading'
 import { getWeekStart, getWeekEnd, getWeekNumber, getNextWeekStart, isFridayOrLater } from '@/lib/dates'
 
 interface Plan {
@@ -23,6 +24,7 @@ function weekLabel(weekStart: string): string {
 
 export default function WeeklyPage() {
   const [plans, setPlans] = useState<Plan[]>([])
+  const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const currentWeekStart = getWeekStart()
   const nextWeekStart = getNextWeekStart()
@@ -32,8 +34,10 @@ export default function WeeklyPage() {
 
   const fetchPlans = useCallback(async () => {
     const res = await fetch('/api/weekly')
+    if (!res.ok) { setLoading(false); return }
     const data = await res.json()
     setPlans(data.plans)
+    setLoading(false)
   }, [])
 
   useEffect(() => { fetchPlans() }, [fetchPlans])
@@ -67,9 +71,13 @@ export default function WeeklyPage() {
     }
   }
 
+  if (loading) return <div className="max-w-3xl mx-auto px-8 py-6"><Loading /></div>
+
   return (
     <div className="max-w-3xl mx-auto px-8 py-6">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      <h1 className="text-lg font-semibold text-gray-800 mb-4">周记</h1>
 
       {/* Next week placeholder (shown from Friday onwards) */}
       {showNextWeek && !nextExists && (

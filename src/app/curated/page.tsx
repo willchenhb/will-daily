@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Toast from '@/components/Toast'
+import Loading from '@/components/Loading'
 import Markdown from '@/components/Markdown'
 
 interface Article {
@@ -46,13 +47,16 @@ export default function CuratedPage() {
   const [url, setUrl] = useState('')
   const [adding, setAdding] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const router = useRouter()
 
   const fetchArticles = useCallback(async () => {
     const res = await fetch('/api/curated')
+    if (!res.ok) { setLoading(false); return }
     const data = await res.json()
     setArticles(data.articles)
+    setLoading(false)
   }, [])
 
   useEffect(() => { fetchArticles() }, [fetchArticles])
@@ -84,6 +88,8 @@ export default function CuratedPage() {
     }
     setAdding(false)
   }
+
+  if (loading) return <div className="max-w-4xl mx-auto px-8 py-6"><Loading /></div>
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-6">

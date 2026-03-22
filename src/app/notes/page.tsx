@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import NoteCard from '@/components/NoteCard'
 import Toast from '@/components/Toast'
+import Loading from '@/components/Loading'
 import { useRouter } from 'next/navigation'
 
 interface NoteItem {
@@ -19,18 +20,22 @@ export default function NotesPage() {
   const [categories, setCategories] = useState<string[]>([])
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [hasApiKey, setHasApiKey] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const router = useRouter()
 
   const fetchNotes = useCallback(async () => {
     const params = activeCategory ? `?category=${encodeURIComponent(activeCategory)}` : ''
     const res = await fetch(`/api/notes${params}`)
+    if (!res.ok) { setLoading(false); return }
     const data = await res.json()
     setNotes(data.notes)
+    setLoading(false)
   }, [activeCategory])
 
   const fetchCategories = useCallback(async () => {
     const res = await fetch('/api/notes/categories')
+    if (!res.ok) return
     const data = await res.json()
     setCategories(data)
   }, [])
@@ -62,6 +67,8 @@ export default function NotesPage() {
       setToast({ message: '创建失败', type: 'error' })
     }
   }
+
+  if (loading) return <div className="max-w-3xl mx-auto px-8 py-6"><Loading /></div>
 
   return (
     <div className="max-w-3xl mx-auto px-8 py-6">
