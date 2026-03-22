@@ -4,19 +4,18 @@ import { useState, useEffect, useCallback } from 'react'
 import Toast from '@/components/Toast'
 
 const MODELS = [
-  { value: 'moonshot-v1-8k', label: 'moonshot-v1-8k (快速)' },
-  { value: 'moonshot-v1-32k', label: 'moonshot-v1-32k (默认)' },
-  { value: 'moonshot-v1-128k', label: 'moonshot-v1-128k (长文本)' },
-  { value: 'moonshot-v1-auto', label: 'moonshot-v1-auto (自动)' },
   { value: 'kimi-k2.5', label: 'kimi-k2.5 (最新)' },
+  { value: 'moonshot-v1-auto', label: 'moonshot-v1-auto (自动)' },
+  { value: 'moonshot-v1-8k', label: 'moonshot-v1-8k (快速)' },
+  { value: 'moonshot-v1-32k', label: 'moonshot-v1-32k' },
+  { value: 'moonshot-v1-128k', label: 'moonshot-v1-128k (长文本)' },
 ]
 
 export default function SettingsPage() {
   const [apiKey, setApiKey] = useState('')
   const [apiKeyMasked, setApiKeyMasked] = useState('')
   const [apiKeySet, setApiKeySet] = useState(false)
-  const [model, setModel] = useState('moonshot-v1-32k')
-  const [maxTokens, setMaxTokens] = useState('1024')
+  const [model, setModel] = useState('kimi-k2.5')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
@@ -25,8 +24,7 @@ export default function SettingsPage() {
     const data = await res.json()
     setApiKeySet(data.ai_api_key_set === 'true')
     setApiKeyMasked(data.ai_api_key_masked || '')
-    setModel(data.ai_model || 'moonshot-v1-32k')
-    setMaxTokens(data.ai_max_tokens || '1024')
+    setModel(data.ai_model || 'kimi-k2.5')
   }, [])
 
   useEffect(() => { fetchSettings() }, [fetchSettings])
@@ -34,10 +32,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const body: Record<string, string> = {
-        ai_model: model,
-        ai_max_tokens: maxTokens,
-      }
+      const body: Record<string, string> = { ai_model: model }
       if (apiKey) body.ai_api_key = apiKey
       await fetch('/api/settings', {
         method: 'PUT',
@@ -63,7 +58,7 @@ export default function SettingsPage() {
         <div className="border-b border-gray-100 pb-5">
           <h2 className="text-[14px] font-medium text-gray-700 mb-4">AI 摘要配置</h2>
           <p className="text-[12px] text-gray-400 mb-4">
-            使用 Kimi API（兼容 OpenAI SDK）生成笔记摘要。API 端点: https://api.moonshot.cn/v1
+            使用 Kimi API 生成笔记摘要和精选速读。API 端点: https://api.moonshot.cn/v1
           </p>
 
           <div className="mb-4">
@@ -91,18 +86,6 @@ export default function SettingsPage() {
                 <option key={m.value} value={m.value}>{m.label}</option>
               ))}
             </select>
-          </div>
-
-          <div className="mb-4">
-            <label className="text-[12px] text-gray-500 block mb-1">最大 Token</label>
-            <input
-              type="number"
-              value={maxTokens}
-              onChange={e => setMaxTokens(e.target.value)}
-              min="256"
-              max="8192"
-              className="w-32 text-[13px] border border-gray-200 rounded px-3 py-2 outline-none focus:border-[#3a7a4f]"
-            />
           </div>
         </div>
 
