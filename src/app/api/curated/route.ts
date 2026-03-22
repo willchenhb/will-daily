@@ -28,17 +28,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'url is required' }, { status: 400 })
   }
 
-  // Check if already exists
   const existing = await prisma.curatedArticle.findUnique({ where: { url } })
   if (existing) {
     return NextResponse.json({ error: '该链接已收藏' }, { status: 409 })
   }
 
   try {
-    // Scrape article
     const meta = await scrapeArticle(url)
 
-    // Create article first
+    // Save article immediately, summary = "generating" as placeholder
     const article = await prisma.curatedArticle.create({
       data: {
         url,
@@ -46,21 +44,25 @@ export async function POST(request: NextRequest) {
         image: meta.image,
         content: meta.content,
         source: meta.source,
+        summary: '__generating__',
       },
     })
 
-    // Try to generate summary (non-blocking failure)
-    try {
-      if (meta.content) {
-        const summary = await generateSummary(meta.content)
-        await prisma.curatedArticle.update({
-          where: { id: article.id },
-          data: { summary },
+    // Fire-and-forget: generate summary async
+    if (meta.content) {
+      generateSummary(meta.content)
+        .then(summary => {
+          prisma.curatedArticle.update({
+            where: { id: article.id },
+            data: { summary },
+          }).catch(() => {})
         })
-        return NextResponse.json({ ...article, summary }, { status: 201 })
-      }
-    } catch {
-      // Summary generation failed, article still saved
+        .catch(() => {
+          prisma.curatedArticle.update({
+            where: { id: article.id },
+            data: { summary: null },
+          }).catch(() => {})
+        })
     }
 
     return NextResponse.json(article, { status: 201 })
