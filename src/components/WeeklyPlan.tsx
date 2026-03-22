@@ -18,6 +18,7 @@ interface WeeklyPlanProps {
   content: string
   todos: Todo[]
   isCurrent?: boolean
+  isNext?: boolean
   onSave: (data: { id?: number; weekStart: string; content?: string }) => Promise<number | undefined>
   onRefresh: () => void
 }
@@ -29,6 +30,7 @@ export default function WeeklyPlan({
   content: initialContent,
   todos,
   isCurrent,
+  isNext,
   onSave,
   onRefresh,
 }: WeeklyPlanProps) {
@@ -68,6 +70,9 @@ export default function WeeklyPlan({
         {isCurrent && (
           <span className="text-[10px] text-white bg-[#3a7a4f] px-2 py-0.5 rounded">本周</span>
         )}
+        {isNext && (
+          <span className="text-[10px] text-[#3a7a4f] border border-[#c5d9c5] px-2 py-0.5 rounded">下周</span>
+        )}
       </div>
 
       <div className="mb-4">
@@ -87,7 +92,7 @@ export default function WeeklyPlan({
             onClick={() => setEditingContent(true)}
             dangerouslySetInnerHTML={{ __html: content }}
           />
-        ) : isCurrent ? (
+        ) : (isCurrent || isNext) ? (
           <div
             className="text-[13px] text-gray-300 cursor-pointer hover:text-gray-400 py-1"
             onClick={() => setEditingContent(true)}
@@ -110,7 +115,7 @@ export default function WeeklyPlan({
         ))}
       </div>
 
-      {(isCurrent || id) && (
+      {(isCurrent || isNext || id) && (
         <div className="mt-3 flex items-center gap-2">
           <input
             type="text"

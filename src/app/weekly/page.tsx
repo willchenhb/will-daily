@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import WeeklyPlan from '@/components/WeeklyPlan'
 import Toast from '@/components/Toast'
-import { getWeekStart, getWeekEnd, getWeekNumber } from '@/lib/dates'
+import { getWeekStart, getWeekEnd, getWeekNumber, getNextWeekStart, isFridayOrLater } from '@/lib/dates'
 
 interface Plan {
   id: number
@@ -25,7 +25,10 @@ export default function WeeklyPage() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const currentWeekStart = getWeekStart()
+  const nextWeekStart = getNextWeekStart()
+  const showNextWeek = isFridayOrLater()
   const currentExists = plans.some(p => p.weekStart === currentWeekStart)
+  const nextExists = plans.some(p => p.weekStart === nextWeekStart)
 
   const fetchPlans = useCallback(async () => {
     const res = await fetch('/api/weekly')
@@ -68,6 +71,24 @@ export default function WeeklyPage() {
     <div className="max-w-3xl mx-auto px-8 py-6">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
+      {/* Next week placeholder (shown from Friday onwards) */}
+      {showNextWeek && !nextExists && (
+        <>
+          <WeeklyPlan
+            weekStart={nextWeekStart}
+            weekLabel={weekLabel(nextWeekStart)}
+            content=""
+            todos={[]}
+            isCurrent={false}
+            isNext
+            onSave={handleSave}
+            onRefresh={fetchPlans}
+          />
+          <div className="border-t border-gray-100 mb-6" />
+        </>
+      )}
+
+      {/* Current week placeholder */}
       {!currentExists && (
         <>
           <WeeklyPlan
@@ -92,6 +113,7 @@ export default function WeeklyPage() {
             content={plan.content || ''}
             todos={plan.todos}
             isCurrent={plan.weekStart === currentWeekStart}
+            isNext={plan.weekStart === nextWeekStart}
             onSave={handleSave}
             onRefresh={fetchPlans}
           />

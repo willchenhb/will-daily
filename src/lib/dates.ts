@@ -32,6 +32,19 @@ export function getWeekEnd(weekStart: string): string {
   return toLocalDateStr(d)
 }
 
+export function getNextWeekStart(): string {
+  const d = new Date()
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1) + 7 // Next Monday
+  d.setDate(diff)
+  return toLocalDateStr(d)
+}
+
+export function isFridayOrLater(): boolean {
+  const day = new Date().getDay()
+  return day >= 5 || day === 0 // Friday(5), Saturday(6), Sunday(0)
+}
+
 export function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
   const weekdays = ['日', '一', '二', '三', '四', '五', '六']
