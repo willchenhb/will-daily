@@ -29,14 +29,17 @@ export async function generateSummary(content: string): Promise<string> {
   // Strip HTML tags for the API
   const plainText = content.replace(/<[^>]*>/g, '').slice(0, 8000)
 
+  const isK2 = settings.model.startsWith('kimi-k2')
   const response = await client.chat.completions.create({
     model: settings.model,
     messages: [
       { role: 'system', content: '你是一个笔记摘要助手。请对以下内容生成简洁的中文摘要，提取关键要点。' },
       { role: 'user', content: plainText },
     ],
-    max_tokens: settings.maxTokens,
-    temperature: 0.3,
+    ...(isK2
+      ? { max_completion_tokens: settings.maxTokens }
+      : { max_tokens: settings.maxTokens, temperature: 0.3 }
+    ),
   })
 
   return response.choices[0]?.message?.content || ''
