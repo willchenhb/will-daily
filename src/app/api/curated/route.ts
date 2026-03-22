@@ -39,21 +39,7 @@ export async function POST(request: NextRequest) {
   try {
     const meta = await scrapeArticle(url)
 
-    let summary: string | null = null
-    let tags = ''
-
-    // Synchronous analysis - await result
-    if (meta.content) {
-      try {
-        const result = await analyzeArticle(meta.content)
-        summary = result.summary
-        tags = result.tags.join(',')
-      } catch (e) {
-        console.error('Article analysis failed:', e instanceof Error ? e.message : e)
-        summary = null
-      }
-    }
-
+    // Save article immediately so user gets fast response
     const article = await prisma.curatedArticle.create({
       data: {
         url,
@@ -61,10 +47,23 @@ export async function POST(request: NextRequest) {
         image: meta.image,
         content: meta.content,
         source: meta.source,
-        summary,
-        tags,
       },
     })
+
+    // Async analysis in background (non-blocking)
+    if (meta.content) {
+      analyzeArticle(meta.content)
+        .then(result => {
+          return prisma.curatedArticle.update({
+            where: { id: article.id },
+            data: { summary: result.summary, tags: result.tags.join(',') },
+          })
+        })
+        .then(() => console.log(`Article ${article.id} analysis complete`))
+        .catch(e => {
+          console.error(`Article ${article.id} analysis failed:`, e instanceof Error ? e.message : e)
+        })
+    }
 
     return NextResponse.json(article, { status: 201 })
   } catch (e) {

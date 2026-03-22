@@ -61,6 +61,14 @@ export default function CuratedPage() {
 
   useEffect(() => { fetchArticles() }, [fetchArticles])
 
+  // Auto-refresh when articles are pending analysis (no summary yet)
+  useEffect(() => {
+    const hasPending = articles.some(a => a.summary === null && a.createdAt)
+    if (!hasPending) return
+    const timer = setInterval(fetchArticles, 5000)
+    return () => clearInterval(timer)
+  }, [articles, fetchArticles])
+
   const handleRefresh = async () => {
     setRefreshing(true)
     await fetchArticles()
@@ -171,7 +179,12 @@ export default function CuratedPage() {
                 <div className="line-clamp-2">
                   <Markdown content={shortSummary(article.summary)} className="text-[12px] [&_*]:text-gray-500" />
                 </div>
-              ) : null}
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 border-2 border-[#3a7a4f] border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[12px] text-[#3a7a4f]">速读生成中...</span>
+                </div>
+              )}
             </div>
           </div>
         ))}
