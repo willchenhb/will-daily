@@ -111,14 +111,15 @@ export default function TodoItem({ id, text, completed, note, weeklyPlanId, onUp
         )}
 
         {/* Action buttons - visible on hover */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-          <button
-            onClick={() => setShowNote(!showNote)}
-            className="text-[11px] text-gray-300 hover:text-[#3a7a4f] px-1.5 py-0.5 rounded"
-            title="添加反馈"
-          >
-            💬
-          </button>
+        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          {!note && !showNote && (
+            <button
+              onClick={() => setShowNote(true)}
+              className="text-[11px] text-[#3a7a4f] border border-[#c5d9c5] px-2 py-0.5 rounded hover:bg-[#eef5ee]"
+            >
+              添加反馈
+            </button>
+          )}
           <button
             onClick={handleDelete}
             className="text-gray-300 hover:text-red-400 text-xs"
