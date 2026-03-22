@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"git add prisma/schema.prisma src/generated/prisma src/components/TodoItem.tsx src/components/WeeklyPlan.tsx src/app/weekly/page.tsx 'src/app/api/weekly/[id]/todos/[todoId]/route.ts' && git...",
+  "error": "Exit code 1\nThe following paths are ignored by one of your .gitignore files:\nsrc/generated/prisma\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"",
+  "timestamp": "2026-03-22T12:15:46.787Z",
+  "retry_count": 2
+}
