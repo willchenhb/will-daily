@@ -61,11 +61,14 @@ export default function CuratedPage() {
 
   useEffect(() => { fetchArticles() }, [fetchArticles])
 
-  // Auto-refresh when articles are pending analysis (no summary yet)
+  // Auto-refresh only for articles created in the last 2 minutes without summary
   useEffect(() => {
-    const hasPending = articles.some(a => a.summary === null && a.createdAt)
+    const now = Date.now()
+    const hasPending = articles.some(a =>
+      !a.summary && (now - new Date(a.createdAt).getTime()) < 120_000
+    )
     if (!hasPending) return
-    const timer = setInterval(fetchArticles, 5000)
+    const timer = setInterval(fetchArticles, 8000)
     return () => clearInterval(timer)
   }, [articles, fetchArticles])
 
@@ -179,12 +182,12 @@ export default function CuratedPage() {
                 <div className="line-clamp-2">
                   <Markdown content={shortSummary(article.summary)} className="text-[12px] [&_*]:text-gray-500" />
                 </div>
-              ) : (
+              ) : (Date.now() - new Date(article.createdAt).getTime()) < 120_000 ? (
                 <div className="flex items-center gap-2">
                   <span className="inline-block w-3 h-3 border-2 border-[#3a7a4f] border-t-transparent rounded-full animate-spin" />
                   <span className="text-[12px] text-[#3a7a4f]">速读生成中...</span>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         ))}
