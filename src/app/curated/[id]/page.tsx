@@ -142,7 +142,16 @@ export default function CuratedDetailPage() {
         ) : article.summary ? (
           <Markdown content={article.summary} className="text-[13px] [&_*]:!text-gray-800" />
         ) : (
-          <p className="text-[13px] text-gray-400 italic">暂无速读摘要</p>
+          <div className="flex items-center gap-3">
+            <p className="text-[13px] text-gray-400 italic">暂无速读摘要</p>
+            <button
+              onClick={handleReanalyze}
+              disabled={reanalyzing}
+              className="text-[12px] text-white bg-[#3a7a4f] hover:bg-[#2d6b3f] px-3 py-1 rounded disabled:opacity-50"
+            >
+              {reanalyzing ? '分析中...' : '生成速读'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -176,7 +185,7 @@ export default function CuratedDetailPage() {
           <button
             onClick={handleReanalyze}
             disabled={reanalyzing}
-            className="text-[12px] text-gray-400 hover:text-[#3a7a4f] disabled:opacity-50"
+            className="text-[12px] text-[#3a7a4f] border border-[#c5d9c5] px-3 py-1 rounded hover:bg-[#eef5ee] disabled:opacity-50"
           >
             {reanalyzing ? '分析中...' : '重新分析'}
           </button>
