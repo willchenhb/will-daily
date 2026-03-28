@@ -118,17 +118,24 @@ export default function CuratedPage() {
   useEffect(() => { fetchArticles(1) }, [fetchArticles])
 
   // Infinite scroll: load more when sentinel is visible
+  const pageRef = useRef(page)
+  pageRef.current = page
+  const hasMoreRef = useRef(hasMore)
+  hasMoreRef.current = hasMore
+  const loadingMoreRef = useRef(loadingMore)
+  loadingMoreRef.current = loadingMore
+
   useEffect(() => {
-    if (!hasMore || loadingMore) return
+    const el = observerRef.current
+    if (!el) return
     const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        fetchArticles(page + 1, true)
+      if (entries[0].isIntersecting && hasMoreRef.current && !loadingMoreRef.current) {
+        fetchArticles(pageRef.current + 1, true)
       }
     }, { threshold: 0.1 })
-    const el = observerRef.current
-    if (el) observer.observe(el)
-    return () => { if (el) observer.unobserve(el) }
-  }, [hasMore, loadingMore, page, fetchArticles])
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [fetchArticles])
 
   // Auto-refresh only for articles created in the last 2 minutes without summary
   useEffect(() => {
@@ -312,8 +319,8 @@ export default function CuratedPage() {
         ))}
       </div>
 
-      {/* Infinite scroll sentinel */}
-      {hasMore && <div ref={observerRef} className="h-4" />}
+      {/* Infinite scroll sentinel - always rendered */}
+      <div ref={observerRef} className="h-4" />
       {loadingMore && (
         <div className="flex justify-center py-6">
           <span className="inline-block w-5 h-5 border-2 border-[#3a7a4f] border-t-transparent rounded-full animate-spin" />
