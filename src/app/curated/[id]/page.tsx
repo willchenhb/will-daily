@@ -9,12 +9,26 @@ interface ArticleDetail {
   id: number
   url: string
   title: string
+  author: string | null
   image: string | null
   content: string | null
   summary: string | null
+  keyPoints: string | null
   tags: string | null
+  category: string | null
   source: string | null
+  status: string | null
   createdAt: string
+}
+
+const CATEGORIES: Record<string, { label: string; emoji: string }> = {
+  tech: { label: '科技', emoji: '🔬' },
+  finance: { label: '金融', emoji: '💰' },
+  health: { label: '健康', emoji: '🏥' },
+  education: { label: '教育', emoji: '📚' },
+  lifestyle: { label: '生活', emoji: '🏠' },
+  business: { label: '商业', emoji: '💼' },
+  other: { label: '其他', emoji: '📌' },
 }
 
 function proxyImage(url: string | null): string | null {
@@ -37,6 +51,16 @@ function parseTags(tags: string | null): string[] {
   return tags.split(',').filter(Boolean)
 }
 
+function parseKeyPoints(keyPoints: string | null): string[] {
+  if (!keyPoints) return []
+  try {
+    const arr = JSON.parse(keyPoints)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
 export default function CuratedDetailPage() {
   const { id } = useParams()
   const router = useRouter()
@@ -53,9 +77,9 @@ export default function CuratedDetailPage() {
 
   useEffect(() => { fetchArticle() }, [fetchArticle])
 
-  // Auto-refresh while generating
+  // Auto-refresh while analyzing
   useEffect(() => {
-    if (article?.summary !== '__generating__') return
+    if (!article || (article.status !== 'pending' && article.status !== 'analyzing')) return
     const timer = setInterval(fetchArticle, 3000)
     return () => clearInterval(timer)
   }, [article, fetchArticle])
@@ -85,6 +109,8 @@ export default function CuratedDetailPage() {
   if (!article) return null
 
   const tags = parseTags(article.tags)
+  const keyPoints = parseKeyPoints(article.keyPoints)
+  const cat = article.category ? CATEGORIES[article.category] : null
 
   return (
     <div className="max-w-3xl mx-auto px-8 py-6">
@@ -112,6 +138,14 @@ export default function CuratedDetailPage() {
         <span className="text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded">
           {sourceLabel(article.source)}
         </span>
+        {cat && (
+          <span className="text-[11px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded">
+            {cat.emoji}{cat.label}
+          </span>
+        )}
+        {article.author && (
+          <span className="text-[12px] text-gray-500">{article.author}</span>
+        )}
         <span className="text-[12px] text-gray-400">{formatFullDate(article.createdAt)}</span>
       </div>
 
@@ -134,7 +168,7 @@ export default function CuratedDetailPage() {
       {/* Summary */}
       <div className="bg-[#f8faf8] border border-[#e0ebe0] rounded-xl p-5 mb-5">
         <div className="text-[11px] text-[#3a7a4f] font-medium mb-2">✦ 速读</div>
-        {article.summary === '__generating__' ? (
+        {(article.status === 'pending' || article.status === 'analyzing') ? (
           <div className="flex items-center gap-2">
             <span className="inline-block w-3 h-3 border-2 border-[#3a7a4f] border-t-transparent rounded-full animate-spin" />
             <span className="text-[13px] text-[#3a7a4f]">速读生成中...</span>
@@ -154,6 +188,18 @@ export default function CuratedDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Key Points */}
+      {keyPoints.length > 0 && (
+        <div className="mb-5">
+          <div className="text-[11px] text-[#3a7a4f] font-medium mb-2">📋 关键要点</div>
+          <ol className="list-decimal list-inside space-y-1.5">
+            {keyPoints.map((point, i) => (
+              <li key={i} className="text-[13px] text-gray-700 leading-relaxed font-content">{point}</li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {/* Show original content */}
       <div className="mb-5">
