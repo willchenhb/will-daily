@@ -33,8 +33,7 @@ export default function LoginPage() {
         return
       }
 
-      router.push('/diary')
-      router.refresh()
+      window.location.href = '/diary'
     } catch {
       setError('Network error')
     } finally {
