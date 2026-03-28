@@ -179,10 +179,10 @@ export default function CuratedPage() {
 
   const totalAll = Object.values(counts).reduce((a, b) => a + b, 0)
 
-  if (loading) return <div className="max-w-4xl mx-auto px-8 py-6"><Loading /></div>
+  if (loading) return <div className="max-w-6xl mx-auto px-8 py-6"><Loading /></div>
 
   return (
-    <div className="max-w-4xl mx-auto px-8 py-6">
+    <div className="max-w-6xl mx-auto px-8 py-6">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Add URL input + refresh */}
@@ -253,7 +253,7 @@ export default function CuratedPage() {
       </div>
 
       {/* Article cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {articles.map(article => (
           <div
             key={article.id}
