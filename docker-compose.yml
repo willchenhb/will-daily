@@ -1,0 +1,15 @@
+services:
+  will-daily:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - AUTH_ENABLED=true
+      - KIMI_API_KEY=${KIMI_API_KEY:-}
+      - DATABASE_URL=file:./data/daily.db
+    volumes:
+      - will-daily-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  will-daily-data:
