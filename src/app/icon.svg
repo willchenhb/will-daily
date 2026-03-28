@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#3a7a4f"/>
+  <!-- Bamboo stalk -->
+  <rect x="14" y="5" width="4" height="22" rx="2" fill="#eef5ee" opacity="0.9"/>
+  <!-- Bamboo joints -->
+  <rect x="13" y="10" width="6" height="1.5" rx="0.75" fill="#2d6b3f"/>
+  <rect x="13" y="17" width="6" height="1.5" rx="0.75" fill="#2d6b3f"/>
+  <!-- Leaf left -->
+  <path d="M13 9 Q7 6 5 10 Q9 9 13 10.5" fill="#c5e8c5" opacity="0.8"/>
+  <!-- Leaf right -->
+  <path d="M19 16 Q25 13 27 17 Q23 16 19 17.5" fill="#c5e8c5" opacity="0.8"/>
+  <!-- Small leaf -->
+  <path d="M13 17 Q9 15 8 18 Q10 17 13 18" fill="#a8d8a8" opacity="0.7"/>
+</svg>
