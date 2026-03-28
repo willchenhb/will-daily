@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 const navItems = [
   { href: '/diary', icon: '📓', label: '日记' },
@@ -12,11 +12,20 @@ const navItems = [
   { href: '/graph', icon: '🕸️', label: '图谱' },
 ]
 
+interface AuthUser {
+  id: number
+  username: string
+  role: string
+}
+
 export default function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
+  const [authEnabled, setAuthEnabled] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -41,6 +50,30 @@ export default function Sidebar() {
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
+
+  // Fetch auth user info (re-check on route change to detect login)
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => {
+        if (res.ok) {
+          setAuthEnabled(true)
+          return res.json()
+        }
+        if (res.status === 401) setAuthEnabled(true)
+        return null
+      })
+      .then(data => {
+        if (data?.user) setAuthUser(data.user)
+      })
+      .catch(() => {})
+  }, [pathname])
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    setAuthUser(null)
+    router.push('/login')
+    router.refresh()
+  }
 
   const toggle = () => {
     setCollapsed(prev => {
@@ -125,6 +158,32 @@ export default function Sidebar() {
             </Link>
           </div>
 
+          {authEnabled && authUser && (
+            <div className="px-2 mb-1 space-y-1">
+              {authUser.role === 'admin' && (
+                <Link
+                  href="/admin"
+                  onClick={closeMobile}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] transition-colors ${
+                    pathname === '/admin'
+                      ? 'bg-[#eef5ee] text-[#3a7a4f] font-medium'
+                      : 'text-gray-400 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className="text-[15px]">👤</span>
+                  <span>管理</span>
+                </Link>
+              )}
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] text-gray-400 hover:bg-gray-50 transition-colors"
+              >
+                <span className="text-[15px]">🚪</span>
+                <span>退出 ({authUser.username})</span>
+              </button>
+            </div>
+          )}
+
           <div className="text-center py-3 border-t border-gray-50">
             <span className="text-[11px] text-gray-300 tracking-wider">🌿 日拱一卒</span>
           </div>
@@ -180,6 +239,32 @@ export default function Sidebar() {
           {!collapsed && <span>设置</span>}
         </Link>
       </div>
+
+      {authEnabled && authUser && (
+        <div className="px-2 mb-1 space-y-1">
+          {authUser.role === 'admin' && (
+            <Link
+              href="/admin"
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] transition-colors ${
+                pathname === '/admin'
+                  ? 'bg-[#eef5ee] text-[#3a7a4f] font-medium'
+                  : 'text-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-[15px]">👤</span>
+              {!collapsed && <span>管理</span>}
+            </Link>
+          )}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] text-gray-400 hover:bg-gray-50 transition-colors"
+            title={`退出 ${authUser.username}`}
+          >
+            <span className="text-[15px]">🚪</span>
+            {!collapsed && <span>退出 ({authUser.username})</span>}
+          </button>
+        </div>
+      )}
 
       {!collapsed && (
         <div className="text-center py-3 border-t border-gray-50">
