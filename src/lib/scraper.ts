@@ -2,6 +2,7 @@ import * as cheerio from 'cheerio'
 
 interface ArticleMeta {
   title: string
+  author: string | null
   image: string | null
   content: string
   source: string
@@ -41,12 +42,15 @@ export async function scrapeArticle(url: string): Promise<ArticleMeta> {
     const source = isWechat ? 'wechat' : parsed.hostname
 
     let title = ''
+    let author: string | null = null
     let image: string | null = null
     let content = ''
 
     if (isWechat) {
       title = $('h1#activity-name').text().trim() ||
               $('meta[property="og:title"]').attr('content') || ''
+      author = $('#js_name').text().trim() ||
+               $('meta[name="author"]').attr('content') || null
       image = $('meta[property="og:image"]').attr('content') ||
               $('#js_content img').first().attr('data-src') ||
               $('#js_content img').first().attr('src') || null
@@ -63,7 +67,7 @@ export async function scrapeArticle(url: string): Promise<ArticleMeta> {
 
     if (!title) throw new Error('Could not extract article title')
 
-    return { title, image, content: content.slice(0, 8000), source }
+    return { title, author, image, content: content.slice(0, 8000), source }
   } finally {
     clearTimeout(timeout)
   }

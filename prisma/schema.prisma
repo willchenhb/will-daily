@@ -55,15 +55,21 @@ model CuratedArticle {
   id        Int      @id @default(autoincrement())
   url       String   @unique
   title     String
-  image     String?  // Cover image URL
-  content   String?  // Extracted article text
-  summary   String?  // Kimi-generated summary
-  tags      String?  // Comma-separated auto-generated tags
-  source    String?  // e.g. "wechat"
+  author    String?
+  image     String?
+  content   String?
+  summary   String?
+  keyPoints String?  // JSON array of strings
+  tags      String?  // Comma-separated
+  category  String?  // tech|finance|health|education|lifestyle|business|other
+  source    String?
+  status    String   @default("done") // pending|analyzing|done|failed
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([createdAt])
+  @@index([category])
+  @@index([status])
 }
 
 model Setting {

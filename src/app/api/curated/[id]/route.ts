@@ -33,7 +33,7 @@ export async function DELETE(
   }
 }
 
-// Re-analyze: generate summary + tags
+// Re-analyze: generate summary + tags + keyPoints + category
 export async function POST(
   _request: NextRequest,
   { params }: { params: { id: string } }
@@ -51,12 +51,19 @@ export async function POST(
       where: { id },
       data: {
         summary: result.summary,
+        keyPoints: JSON.stringify(result.keyPoints),
         tags: result.tags.join(','),
+        category: result.category,
+        status: 'done',
       },
     })
     return NextResponse.json(result)
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Analysis failed'
+    await prisma.curatedArticle.update({
+      where: { id },
+      data: { status: 'failed' },
+    }).catch(() => {})
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
