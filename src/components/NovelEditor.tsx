@@ -1,6 +1,6 @@
 'use client'
 
-import { EditorRoot, EditorContent, EditorCommand, EditorCommandItem, EditorCommandList, EditorCommandEmpty, EditorBubble, EditorBubbleItem, type JSONContent, handleCommandNavigation, createSuggestionItems, Command, renderItems, type SuggestionItem } from 'novel'
+import { EditorRoot, EditorContent, EditorCommand, EditorCommandItem, EditorCommandList, EditorCommandEmpty, EditorBubble, EditorBubbleItem, type JSONContent, handleCommandNavigation, createSuggestionItems, Command, renderItems, type SuggestionItem, StarterKit, Placeholder, HorizontalRule } from 'novel'
 import { useState, useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { Heading1, Heading2, Heading3, List, ListOrdered, TextQuote, Code, CheckSquare, Minus, Text } from 'lucide-react'
@@ -63,7 +63,7 @@ export default function NovelEditor({ content, onChange, onSave, placeholder = '
     <EditorRoot>
       <EditorContent
         initialContent={initialContent}
-        extensions={[slashCommand]}
+        extensions={[StarterKit, Placeholder.configure({ placeholder }), HorizontalRule, slashCommand]}
         editable={editable}
         onUpdate={({ editor }) => debouncedOnChange(editor)}
         onCreate={({ editor }) => {
