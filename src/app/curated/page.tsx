@@ -124,18 +124,20 @@ export default function CuratedPage() {
   hasMoreRef.current = hasMore
   const loadingMoreRef = useRef(loadingMore)
   loadingMoreRef.current = loadingMore
+  const fetchRef = useRef(fetchArticles)
+  fetchRef.current = fetchArticles
 
   useEffect(() => {
     const el = observerRef.current
     if (!el) return
     const observer = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMoreRef.current && !loadingMoreRef.current) {
-        fetchArticles(pageRef.current + 1, true)
+        fetchRef.current(pageRef.current + 1, true)
       }
     }, { threshold: 0.1 })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [fetchArticles])
+  }, []) // mount once, refs keep values fresh
 
   // Auto-refresh only for articles created in the last 2 minutes without summary
   useEffect(() => {
