@@ -89,7 +89,6 @@ export default function CuratedPage() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-  const observerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   // Debounce search
@@ -117,27 +116,23 @@ export default function CuratedPage() {
 
   useEffect(() => { fetchArticles(1) }, [fetchArticles])
 
-  // Infinite scroll: load more when sentinel is visible
-  const pageRef = useRef(page)
-  pageRef.current = page
-  const hasMoreRef = useRef(hasMore)
-  hasMoreRef.current = hasMore
-  const loadingMoreRef = useRef(loadingMore)
-  loadingMoreRef.current = loadingMore
-  const fetchRef = useRef(fetchArticles)
-  fetchRef.current = fetchArticles
+  // Infinite scroll via scroll event
+  const scrollStateRef = useRef({ page, hasMore, loadingMore, fetchArticles })
+  scrollStateRef.current = { page, hasMore, loadingMore, fetchArticles }
 
   useEffect(() => {
-    const el = observerRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMoreRef.current && !loadingMoreRef.current) {
-        fetchRef.current(pageRef.current + 1, true)
+    const handleScroll = () => {
+      const { page, hasMore, loadingMore, fetchArticles } = scrollStateRef.current
+      if (!hasMore || loadingMore) return
+      const scrollBottom = window.innerHeight + window.scrollY
+      const docHeight = document.documentElement.scrollHeight
+      if (scrollBottom >= docHeight - 300) {
+        fetchArticles(page + 1, true)
       }
-    }, { threshold: 0.1 })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, []) // mount once, refs keep values fresh
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // Auto-refresh only for articles created in the last 2 minutes without summary
   useEffect(() => {
@@ -321,8 +316,6 @@ export default function CuratedPage() {
         ))}
       </div>
 
-      {/* Infinite scroll sentinel - always rendered */}
-      <div ref={observerRef} className="h-4" />
       {loadingMore && (
         <div className="flex justify-center py-6">
           <span className="inline-block w-5 h-5 border-2 border-[#3a7a4f] border-t-transparent rounded-full animate-spin" />
