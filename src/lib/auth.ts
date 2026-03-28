@@ -2,13 +2,22 @@ import { cookies } from 'next/headers'
 import { prisma } from './prisma'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
+import Database from 'better-sqlite3'
+import path from 'path'
 
 const SESSION_COOKIE = 'will-daily-session'
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
 
-// Simple in-memory session store: token -> userId
-// Production should use Redis or database
-const sessions = new Map<string, { userId: number; expiresAt: number }>()
+function getDb() {
+  const envUrl = process.env.DATABASE_URL
+  let dbPath: string
+  if (envUrl && envUrl.startsWith('file:')) {
+    dbPath = path.resolve(process.cwd(), envUrl.replace('file:', ''))
+  } else {
+    dbPath = path.resolve(process.cwd(), 'data', 'daily.db')
+  }
+  return new Database(dbPath)
+}
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10)
@@ -28,7 +37,12 @@ export function generateApiToken(): string {
 
 export async function createSession(userId: number): Promise<string> {
   const token = generateSessionToken()
-  sessions.set(token, { userId, expiresAt: Date.now() + SESSION_MAX_AGE * 1000 })
+  const expiresAt = Date.now() + SESSION_MAX_AGE * 1000
+
+  // Store in SQLite directly (Prisma doesn't have Session model)
+  const db = getDb()
+  db.prepare('INSERT INTO Session (token, userId, expiresAt) VALUES (?, ?, ?)').run(token, userId, expiresAt)
+  db.close()
 
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE, token, {
@@ -45,13 +59,17 @@ export async function createSession(userId: number): Promise<string> {
 export async function getSession(): Promise<{ userId: number } | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get(SESSION_COOKIE)?.value
-  if (token) {
-    const session = sessions.get(token)
-    if (session && session.expiresAt > Date.now()) {
-      return { userId: session.userId }
-    }
-    sessions.delete(token) // expired
+  if (!token) return null
+
+  const db = getDb()
+  const row = db.prepare('SELECT userId, expiresAt FROM Session WHERE token = ?').get(token) as { userId: number; expiresAt: number } | undefined
+  if (row && row.expiresAt > Date.now()) {
+    db.close()
+    return { userId: row.userId }
   }
+  // Expired or not found — clean up
+  if (row) db.prepare('DELETE FROM Session WHERE token = ?').run(token)
+  db.close()
   return null
 }
 
@@ -59,7 +77,9 @@ export async function clearSession(): Promise<void> {
   const cookieStore = await cookies()
   const token = cookieStore.get(SESSION_COOKIE)?.value
   if (token) {
-    sessions.delete(token)
+    const db = getDb()
+    db.prepare('DELETE FROM Session WHERE token = ?').run(token)
+    db.close()
   }
   cookieStore.delete(SESSION_COOKIE)
 }
@@ -67,7 +87,7 @@ export async function clearSession(): Promise<void> {
 // Get current user from session cookie or API token header
 export async function getCurrentUser(request?: Request) {
   const authEnabled = process.env.AUTH_ENABLED === 'true'
-  if (!authEnabled) return null // Auth disabled, skip
+  if (!authEnabled) return null
 
   // Check Bearer token (API access)
   if (request) {
