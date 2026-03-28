@@ -28,7 +28,7 @@ export async function generateFingerprint(text: string): Promise<KeywordFingerpr
   const client = new OpenAI({
     apiKey: settings.apiKey,
     baseURL: 'https://api.moonshot.cn/v1',
-    timeout: 60_000,
+    timeout: 120_000,
   })
 
   const plainText = text.replace(/<[^>]*>/g, '').slice(0, 4000)
