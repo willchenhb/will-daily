@@ -79,6 +79,17 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String   // bcrypt hash
+  role      String   @default("user") // "admin" | "user"
+  apiToken  String   @unique @default(uuid())
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model ContentNode {
   id         Int      @id @default(autoincrement())
   sourceType String   // 'diary' | 'weekly' | 'note' | 'article'

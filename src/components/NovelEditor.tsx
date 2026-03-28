@@ -42,6 +42,7 @@ interface NovelEditorProps {
 }
 
 export default function NovelEditor({ content, onChange, onSave, placeholder = '输入 / 插入内容...', editable = true }: NovelEditorProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [initialContent, setInitialContent] = useState<JSONContent | undefined>(undefined)
   const [mounted, setMounted] = useState(false)
 

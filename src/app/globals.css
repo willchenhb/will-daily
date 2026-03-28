@@ -46,3 +46,13 @@ body.sidebar-collapsed .main-content {
     padding-top: 56px; /* 给顶栏留空间 */
   }
 }
+
+/* Login page: hide sidebar, remove margin */
+body.login-page .main-content {
+  margin-left: 0 !important;
+  padding-top: 0 !important;
+}
+
+body.login-page aside {
+  display: none !important;
+}

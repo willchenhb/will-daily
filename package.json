@@ -22,6 +22,7 @@
     "@tiptap/pm": "^3.20.4",
     "@tiptap/react": "^3.20.4",
     "@tiptap/starter-kit": "^3.20.4",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.8.0",
     "cheerio": "^1.2.0",
     "graphology": "^0.26.0",
@@ -39,6 +40,7 @@
     "use-debounce": "^10.1.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^18",
