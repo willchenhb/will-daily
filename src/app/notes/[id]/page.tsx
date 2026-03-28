@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Editor from '@/components/Editor'
+import NovelEditor from '@/components/NovelEditor'
 import Toast from '@/components/Toast'
 import Markdown from '@/components/Markdown'
 
@@ -181,7 +181,7 @@ export default function NoteDetailPage() {
         </datalist>
       </div>
 
-      <Editor content={content} onChange={handleContentChange} placeholder="开始写笔记..." onSave={handleSave} />
+      <NovelEditor content={content} onChange={handleContentChange} placeholder="开始写笔记..." onSave={handleSave} />
 
       <div className="flex justify-between items-center mt-4">
         <div className="flex gap-2">
