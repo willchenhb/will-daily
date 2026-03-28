@@ -78,3 +78,33 @@ model Setting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+model ContentNode {
+  id         Int      @id @default(autoincrement())
+  sourceType String   // 'diary' | 'weekly' | 'note' | 'article'
+  sourceId   Int
+  title      String
+  snippet    String
+  embedding  String?  // JSON: keyword weights object
+  method     String   @default("kimi")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  edgesA     ContentEdge[] @relation("edgesFromA")
+  edgesB     ContentEdge[] @relation("edgesFromB")
+
+  @@unique([sourceType, sourceId])
+  @@index([sourceType])
+}
+
+model ContentEdge {
+  id       Int         @id @default(autoincrement())
+  nodeAId  Int
+  nodeBId  Int
+  nodeA    ContentNode @relation("edgesFromA", fields: [nodeAId], references: [id], onDelete: Cascade)
+  nodeB    ContentNode @relation("edgesFromB", fields: [nodeBId], references: [id], onDelete: Cascade)
+  weight   Float
+
+  @@unique([nodeAId, nodeBId])
+  @@index([nodeAId])
+  @@index([nodeBId])
+}
