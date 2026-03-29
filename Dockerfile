@@ -18,6 +18,9 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
+# Create data dir for build-time SSG/prerender
+RUN mkdir -p data
+
 # Build Next.js
 RUN npm run build
 
