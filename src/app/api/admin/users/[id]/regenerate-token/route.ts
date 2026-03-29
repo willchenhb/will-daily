@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser, isAdmin, generateApiToken } from '@/lib/auth'
 import { badRequest, notFound } from '@/lib/api-utils'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }

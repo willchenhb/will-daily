@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { embedContent } from '@/lib/embedding'
 import { parseBody, badRequest } from '@/lib/api-utils'
