@@ -1,4 +1,12 @@
 FROM node:20-slim AS base
+
+# 安装 Python 和编译工具（better-sqlite3 需要）
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-distutils \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN npm config set registry https://registry.npmmirror.com
 
 # Install dependencies
