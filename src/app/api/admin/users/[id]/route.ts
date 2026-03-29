@@ -1,13 +1,14 @@
 export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getCurrentUser, isAdmin, hashPassword } from '@/lib/auth'
-import { parseBody, badRequest, notFound } from '@/lib/api-utils'
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { prisma } = await import('@/lib/prisma')
+  const { getCurrentUser, isAdmin, hashPassword } = await import('@/lib/auth')
+  const { parseBody, badRequest, notFound } = await import('@/lib/api-utils')
   const user = await getCurrentUser(request)
   if (!isAdmin(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -58,6 +59,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { prisma } = await import('@/lib/prisma')
+  const { getCurrentUser, isAdmin } = await import('@/lib/auth')
+  const { badRequest, notFound } = await import('@/lib/api-utils')
   const user = await getCurrentUser(request)
   if (!isAdmin(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

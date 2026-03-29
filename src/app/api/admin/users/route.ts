@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getCurrentUser, isAdmin, hashPassword, generateApiToken } from '@/lib/auth'
-import { parseBody, badRequest } from '@/lib/api-utils'
 
 export async function GET(request: NextRequest) {
+  const { prisma } = await import('@/lib/prisma')
+  const { getCurrentUser, isAdmin } = await import('@/lib/auth')
   const user = await getCurrentUser(request)
   if (!isAdmin(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -27,6 +27,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const { prisma } = await import('@/lib/prisma')
+  const { getCurrentUser, isAdmin, hashPassword, generateApiToken } = await import('@/lib/auth')
+  const { parseBody, badRequest } = await import('@/lib/api-utils')
   const user = await getCurrentUser(request)
   if (!isAdmin(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
