@@ -51,8 +51,9 @@ export default function Sidebar() {
     setMobileOpen(false)
   }, [pathname])
 
-  // Fetch auth user info (re-check on route change to detect login)
+  // Fetch auth user info (skip on login page)
   useEffect(() => {
+    if (pathname === '/login') return
     fetch('/api/auth/me')
       .then(res => {
         if (res.ok) {
@@ -88,6 +89,9 @@ export default function Sidebar() {
   const closeMobile = useCallback(() => {
     setMobileOpen(false)
   }, [])
+
+  // Hide sidebar on login page
+  if (pathname === '/login') return null
 
   // Mobile: top bar + overlay sidebar
   if (isMobile) {
