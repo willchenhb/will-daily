@@ -7,7 +7,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 ENV PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
-RUN npm ci
+# Install build tools for native modules (better-sqlite3)
+RUN apk add --no-cache python3 make g++ && npm ci && apk del python3 make g++
 
 # Build the application
 FROM base AS builder
@@ -18,8 +19,8 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Create data dir for build-time SSG/prerender
-RUN mkdir -p data
+# Create data dir + public dir for build-time
+RUN mkdir -p data public
 
 # Build Next.js
 RUN npm run build
@@ -39,20 +40,16 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Copy standalone build
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
 
-# Copy Prisma + runtime deps for db init
+# Copy Prisma + runtime deps for db init (use shell to skip missing dirs)
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/src/generated ./src/generated
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
 COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=builder /app/node_modules/bindings ./node_modules/bindings
 COPY --from=builder /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
-COPY --from=builder /app/node_modules/prebuild-install ./node_modules/prebuild-install
-COPY --from=builder /app/node_modules/node-addon-api ./node_modules/node-addon-api
-COPY --from=builder /app/src/generated ./src/generated
 
 # Create data directory for SQLite
 RUN mkdir -p data && chown nextjs:nodejs data
