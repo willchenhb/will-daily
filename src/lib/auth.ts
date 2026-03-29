@@ -16,6 +16,10 @@ function getDb() {
   } else {
     dbPath = path.resolve(process.cwd(), 'data', 'daily.db')
   }
+  // Ensure directory exists (needed during Docker build SSG)
+  const fs = require('fs')
+  const dir = path.dirname(dbPath)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
   return new Database(dbPath)
 }
 
