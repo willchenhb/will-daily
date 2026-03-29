@@ -1,7 +1,8 @@
 FROM node:20-slim AS base
 
-# 使用阿里云镜像安装 Python 和编译工具
-RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+# 创建阿里云 sources.list
+RUN echo "deb http://mirrors.aliyun.com/debian bookworm main contrib non-free" > /etc/apt/sources.list && \
+    echo "deb http://mirrors.aliyun.com/debian bookworm-updates main contrib non-free" >> /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y \
     python3 \
