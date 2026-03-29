@@ -2,6 +2,7 @@ import { PrismaClient } from '@/generated/prisma/client'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 import Database from 'better-sqlite3'
 import path from 'path'
+import fs from 'fs'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -16,8 +17,14 @@ function getDbPath(): string {
   return path.resolve(process.cwd(), 'data', 'daily.db')
 }
 
+function ensureDir(dbPath: string) {
+  const dir = path.dirname(dbPath)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+}
+
 function createPrismaClient() {
   const dbPath = getDbPath()
+  ensureDir(dbPath)
 
   // Set WAL mode and busy timeout for better concurrency
   const db = new Database(dbPath)

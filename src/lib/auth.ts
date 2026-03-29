@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import Database from 'better-sqlite3'
 import path from 'path'
+import fs from 'fs'
 
 const SESSION_COOKIE = 'will-daily-session'
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
@@ -16,8 +17,6 @@ function getDb() {
   } else {
     dbPath = path.resolve(process.cwd(), 'data', 'daily.db')
   }
-  // Ensure directory exists (needed during Docker build SSG)
-  const fs = require('fs')
   const dir = path.dirname(dbPath)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
   return new Database(dbPath)
