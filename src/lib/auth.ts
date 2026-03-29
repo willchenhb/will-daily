@@ -38,6 +38,14 @@ export function generateApiToken(): string {
   return crypto.randomUUID()
 }
 
+export const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  maxAge: SESSION_MAX_AGE,
+  path: '/',
+}
+
 export async function createSession(userId: number): Promise<string> {
   const token = generateSessionToken()
   const expiresAt = Date.now() + SESSION_MAX_AGE * 1000
@@ -46,15 +54,6 @@ export async function createSession(userId: number): Promise<string> {
   const db = getDb()
   db.prepare('INSERT INTO Session (token, userId, expiresAt) VALUES (?, ?, ?)').run(token, userId, expiresAt)
   db.close()
-
-  const cookieStore = await cookies()
-  cookieStore.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SESSION_MAX_AGE,
-    path: '/',
-  })
 
   return token
 }
@@ -76,7 +75,7 @@ export async function getSession(): Promise<{ userId: number } | null> {
   return null
 }
 
-export async function clearSession(): Promise<void> {
+export async function clearSession(): Promise<string | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get(SESSION_COOKIE)?.value
   if (token) {
@@ -84,7 +83,7 @@ export async function clearSession(): Promise<void> {
     db.prepare('DELETE FROM Session WHERE token = ?').run(token)
     db.close()
   }
-  cookieStore.delete(SESSION_COOKIE)
+  return token ?? null
 }
 
 // Get current user from session cookie or API token header

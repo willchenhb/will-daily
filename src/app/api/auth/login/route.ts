@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { verifyPassword, createSession } from '@/lib/auth'
+import { verifyPassword, createSession, SESSION_COOKIE_OPTIONS } from '@/lib/auth'
 import { parseBody, badRequest } from '@/lib/api-utils'
 
 export async function POST(request: NextRequest) {
@@ -23,9 +23,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
-  await createSession(user.id)
+  const token = await createSession(user.id)
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     user: { id: user.id, username: user.username, role: user.role },
   })
+  response.cookies.set('will-daily-session', token, SESSION_COOKIE_OPTIONS)
+  return response
 }
