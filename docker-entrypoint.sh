@@ -61,7 +61,14 @@ const tables = [
     password TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'user',
     apiToken TEXT NOT NULL UNIQUE, isActive INTEGER NOT NULL DEFAULT 1,
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)\`
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)\`,
+  \`CREATE TABLE IF NOT EXISTS Session (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL UNIQUE,
+    userId INTEGER NOT NULL,
+    expiresAt INTEGER NOT NULL,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES User(id) ON DELETE CASCADE)\`
 ];
 
 for (const sql of tables) db.exec(sql);
@@ -76,6 +83,7 @@ const indexes = [
   'CREATE INDEX IF NOT EXISTS idx_content_node_type ON ContentNode(sourceType)',
   'CREATE INDEX IF NOT EXISTS idx_edge_a ON ContentEdge(nodeAId)',
   'CREATE INDEX IF NOT EXISTS idx_edge_b ON ContentEdge(nodeBId)',
+  'CREATE INDEX IF NOT EXISTS idx_session_token ON Session(token)',
 ];
 for (const sql of indexes) db.exec(sql);
 
