@@ -62,10 +62,6 @@ export default function Sidebar() {
         if (res.status === 401) {
           setAuthEnabled(true)
           setAuthUser(null)
-          // Invalid session — redirect to login if on a protected page
-          if (!['/login'].includes(window.location.pathname)) {
-            window.location.href = '/login'
-          }
         }
         return null
       })
