@@ -59,6 +59,7 @@ export default function TodoItem({ id, text, completed, note, weeklyPlanId, onUp
       body: JSON.stringify({ note: noteText || null }),
     })
     setSavingNote(false)
+    setShowNote(false)
     onUpdate()
   }
 
