@@ -33,10 +33,13 @@ model TodoItem {
   completed    Boolean    @default(false)
   note         String?    // Feedback/notes on completion
   order        Int
+  milestoneId  Int?
+  milestone    Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
   @@index([weeklyPlanId])
+  @@index([milestoneId])
 }
 
 model Note {
@@ -88,6 +91,82 @@ model User {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model TeamMember {
+  id          Int      @id @default(autoincrement())
+  name        String
+  department  String?
+  role        String?
+  avatarColor String   @default("#3B82F6")
+  level       Int      @default(1) // 0=负责人, 1=一级, 2=二级
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ownedProjects Project[]     @relation("ProjectOwner")
+  ownedRisks    ProjectRisk[] @relation("RiskOwner")
+}
+
+model Project {
+  id             Int      @id @default(autoincrement())
+  name           String
+  code           String   @unique // e.g. "PRJ-001"
+  description    String?
+  category       String   // 产品交付|商业化|平台建设|技术攻关|组织管理
+  status         String   @default("planning") // planning|active|paused|completed|cancelled
+  priority       String   @default("P1") // P0|P1|P2|P3
+  ownerId        Int
+  owner          TeamMember @relation("ProjectOwner", fields: [ownerId], references: [id])
+  startDate      String?  // YYYY-MM-DD
+  targetEndDate  String?  // YYYY-MM-DD
+  okrObjectiveId String?  // e.g. "CHB-O1"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  milestones Milestone[]
+  risks      ProjectRisk[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([category])
+}
+
+model Milestone {
+  id            Int      @id @default(autoincrement())
+  projectId     Int
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title         String
+  dueDate       String?  // YYYY-MM-DD
+  completedDate String?  // YYYY-MM-DD
+  status        String   @default("not_started") // not_started|in_progress|completed|delayed
+  deliverables  String?
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  todos TodoItem[]
+
+  @@index([projectId])
+}
+
+model ProjectRisk {
+  id             Int         @id @default(autoincrement())
+  projectId      Int
+  project        Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title          String
+  probability    String      @default("medium") // low|medium|high
+  impact         String      @default("medium") // low|medium|high
+  mitigation     String?
+  status         String      @default("open") // open|mitigated|closed
+  ownerId        Int?
+  owner          TeamMember? @relation("RiskOwner", fields: [ownerId], references: [id])
+  identifiedDate String?     // YYYY-MM-DD
+  resolvedDate   String?     // YYYY-MM-DD
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([projectId])
+  @@index([ownerId])
 }
 
 model ContentNode {

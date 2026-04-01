@@ -11,6 +11,7 @@ const navItems = [
   { href: '/curated', icon: '⭐', label: '精选' },
   { href: '/graph', icon: '🕸️', label: '图谱' },
   { href: '/okr', icon: '🎯', label: 'OKR' },
+  { href: '/projects', icon: '📊', label: '项目' },
 ]
 
 interface AuthUser {

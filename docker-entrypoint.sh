@@ -62,6 +62,39 @@ const tables = [
     apiToken TEXT NOT NULL UNIQUE, isActive INTEGER NOT NULL DEFAULT 1,
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)\`,
+  \`CREATE TABLE IF NOT EXISTS TeamMember (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+    department TEXT, role TEXT, avatarColor TEXT DEFAULT '#3B82F6',
+    level INTEGER DEFAULT 1,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)\`,
+  \`CREATE TABLE IF NOT EXISTS Project (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+    code TEXT NOT NULL UNIQUE, description TEXT,
+    category TEXT NOT NULL, status TEXT DEFAULT 'planning',
+    priority TEXT DEFAULT 'P1', ownerId INTEGER NOT NULL,
+    startDate TEXT, targetEndDate TEXT, okrObjectiveId TEXT,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ownerId) REFERENCES TeamMember(id))\`,
+  \`CREATE TABLE IF NOT EXISTS Milestone (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, projectId INTEGER NOT NULL,
+    title TEXT NOT NULL, dueDate TEXT, completedDate TEXT,
+    status TEXT DEFAULT 'not_started', deliverables TEXT,
+    "order" INTEGER DEFAULT 0,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE)\`,
+  \`CREATE TABLE IF NOT EXISTS ProjectRisk (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, projectId INTEGER NOT NULL,
+    title TEXT NOT NULL, probability TEXT DEFAULT 'medium',
+    impact TEXT DEFAULT 'medium', mitigation TEXT,
+    status TEXT DEFAULT 'open', ownerId INTEGER,
+    identifiedDate TEXT, resolvedDate TEXT,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE,
+    FOREIGN KEY (ownerId) REFERENCES TeamMember(id))\`,
   \`CREATE TABLE IF NOT EXISTS Session (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     token TEXT NOT NULL UNIQUE,
@@ -84,8 +117,43 @@ const indexes = [
   'CREATE INDEX IF NOT EXISTS idx_edge_a ON ContentEdge(nodeAId)',
   'CREATE INDEX IF NOT EXISTS idx_edge_b ON ContentEdge(nodeBId)',
   'CREATE INDEX IF NOT EXISTS idx_session_token ON Session(token)',
+  'CREATE INDEX IF NOT EXISTS idx_project_owner ON Project(ownerId)',
+  'CREATE INDEX IF NOT EXISTS idx_project_status ON Project(status)',
+  'CREATE INDEX IF NOT EXISTS idx_project_category ON Project(category)',
+  'CREATE INDEX IF NOT EXISTS idx_milestone_project ON Milestone(projectId)',
+  'CREATE INDEX IF NOT EXISTS idx_risk_project ON ProjectRisk(projectId)',
+  'CREATE INDEX IF NOT EXISTS idx_risk_owner ON ProjectRisk(ownerId)',
+  'CREATE INDEX IF NOT EXISTS idx_todo_milestone ON TodoItem(milestoneId)',
 ];
 for (const sql of indexes) db.exec(sql);
+
+// Add milestoneId column to TodoItem if missing
+try {
+  db.prepare('SELECT milestoneId FROM TodoItem LIMIT 1').get();
+} catch(e) {
+  db.exec('ALTER TABLE TodoItem ADD COLUMN milestoneId INTEGER REFERENCES Milestone(id) ON DELETE SET NULL');
+  console.log('Added milestoneId column to TodoItem');
+}
+
+// Seed team members if empty
+const memberCount = db.prepare('SELECT COUNT(*) as c FROM TeamMember').get();
+if (memberCount.c === 0) {
+  const members = [
+    ['陈海彪','AI产品中心','中心负责人','#e74c3c',0],
+    ['王亚洲','产品部','产品负责人','#3498db',1],
+    ['袁小龙','商业化部','商业化负责人','#e91e63',1],
+    ['张帅','瀚海平台部','平台负责人','#9b59b6',1],
+    ['周一新','模型技术部','模型负责人','#1abc9c',1],
+    ['陈斌','应用技术部','应用技术负责人','#e67e22',1],
+    ['陈凯','创新技术部','创新技术负责人','#2ecc71',1],
+    ['袁伟','技术保障部','技术保障负责人','#2ecc71',2],
+    ['张坤','业务管理部','业务BP','#00bcd4',1],
+  ];
+  const now = new Date().toISOString();
+  const stmt = db.prepare('INSERT INTO TeamMember (name,department,role,avatarColor,level,createdAt,updatedAt) VALUES (?,?,?,?,?,?,?)');
+  for (const m of members) stmt.run(...m, now, now);
+  console.log('Seeded 9 team members');
+}
 
 // Seed admin user if no users exist
 const userCount = db.prepare('SELECT COUNT(*) as c FROM User').get();
