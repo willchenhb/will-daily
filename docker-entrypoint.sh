@@ -106,6 +106,14 @@ const tables = [
 
 for (const sql of tables) db.exec(sql);
 
+// Add milestoneId column to TodoItem if missing
+try {
+  db.prepare('SELECT milestoneId FROM TodoItem LIMIT 1').get();
+} catch(e) {
+  db.exec('ALTER TABLE TodoItem ADD COLUMN milestoneId INTEGER REFERENCES Milestone(id) ON DELETE SET NULL');
+  console.log('Added milestoneId column to TodoItem');
+}
+
 // Create indexes
 const indexes = [
   'CREATE INDEX IF NOT EXISTS idx_todo_weekly ON TodoItem(weeklyPlanId)',
@@ -126,14 +134,6 @@ const indexes = [
   'CREATE INDEX IF NOT EXISTS idx_todo_milestone ON TodoItem(milestoneId)',
 ];
 for (const sql of indexes) db.exec(sql);
-
-// Add milestoneId column to TodoItem if missing
-try {
-  db.prepare('SELECT milestoneId FROM TodoItem LIMIT 1').get();
-} catch(e) {
-  db.exec('ALTER TABLE TodoItem ADD COLUMN milestoneId INTEGER REFERENCES Milestone(id) ON DELETE SET NULL');
-  console.log('Added milestoneId column to TodoItem');
-}
 
 // Seed team members if empty
 const memberCount = db.prepare('SELECT COUNT(*) as c FROM TeamMember').get();
