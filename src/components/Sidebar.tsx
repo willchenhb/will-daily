@@ -10,6 +10,7 @@ const navItems = [
   { href: '/notes', icon: '📝', label: '笔记' },
   { href: '/curated', icon: '⭐', label: '精选' },
   { href: '/graph', icon: '🕸️', label: '图谱' },
+  { href: '/okr', icon: '🎯', label: 'OKR' },
 ]
 
 interface AuthUser {

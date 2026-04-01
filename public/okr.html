@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI产品中心 OKR 承接关系全景图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: #ffffff; color: #1a1a2e; }
+  .header { background: #ffffff; color: #1a1a2e; padding: 24px 40px 16px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+  .header::before { display: none; }
+  .header h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; position: relative; color: #1a1a2e; }
+  .header p { font-size: 13px; color: #9ca3af; position: relative; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: #f8faf8; border-radius: 10px; padding: 4px; border: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 100; }
+  .tab { flex: 1; padding: 10px 16px; text-align: center; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: #6b7280; transition: all 0.2s; user-select: none; }
+  .tab:hover { background: #eef5ee; color: #3a7a4f; }
+  .tab.active { background: #3a7a4f; color: white; box-shadow: 0 1px 3px rgba(58,122,79,0.3); }
+  .tab-content { display: none; animation: fadeIn 0.3s ease; }
+  .tab-content.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+  .section-title { font-size: 17px; font-weight: 600; margin-bottom: 16px; padding-left: 14px; border-left: 3px solid #3a7a4f; color: #1a1a2e; }
+  .section-desc { color: #888; font-size: 13px; margin-bottom: 24px; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: #f8faf8; border-radius: 10px; padding: 16px 14px; text-align: center; border: 1px solid #e5e7eb; transition: border-color 0.2s; }
+  .stat-card:hover { border-color: #c5d9c5; }
+  .stat-num { font-size: 24px; font-weight: 700; }
+  .stat-num.red { color: #e74c3c; }
+  .stat-num.blue { color: #3498db; }
+  .stat-num.green { color: #2ecc71; }
+  .stat-num.purple { color: #9b59b6; }
+  .stat-num.orange { color: #e67e22; }
+  .stat-num.teal { color: #1abc9c; }
+  .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
+
+  /* ===== 层级图 ===== */
+  .tree-wrapper { background: white; border-radius: 12px; padding: 28px; border: 1px solid #e5e7eb; overflow-x: auto; }
+
+  /* ===== 个人OKR明细 ===== */
+  .person-card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-left: 4px solid #3498db; transition: border-color 0.2s; }
+  .person-card:hover { border-color: #c5d9c5; }
+  .person-card.head { border-left-color: #e74c3c; }
+  .person-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+  .person-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: white; flex-shrink: 0; }
+  .avatar-red { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+  .avatar-blue { background: linear-gradient(135deg, #3498db, #2980b9); }
+  .avatar-green { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+  .avatar-purple { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+  .avatar-orange { background: linear-gradient(135deg, #e67e22, #d35400); }
+  .avatar-teal { background: linear-gradient(135deg, #1abc9c, #16a085); }
+  .avatar-pink { background: linear-gradient(135deg, #e91e63, #c2185b); }
+  .avatar-cyan { background: linear-gradient(135deg, #00bcd4, #0097a7); }
+  .person-info h3 { font-size: 20px; font-weight: 700; }
+  .person-info .dept { font-size: 13px; color: #888; margin-top: 3px; }
+  .person-info .align-tag { display: inline-block; background: #e8f4fd; color: #2980b9; border-radius: 4px; padding: 2px 10px; font-size: 12px; margin-top: 4px; }
+  .weight-summary { font-size: 12px; color: #999; margin-left: auto; background: #f8f9fa; border-radius: 8px; padding: 8px 14px; text-align: right; flex-shrink: 0; }
+
+  .obj-block { background: #f8f9fa; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; border: 1px solid #eee; transition: border-color 0.2s; }
+  .obj-block:hover { border-color: #ccc; }
+  .obj-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .obj-num { display: inline-flex; align-items: center; justify-content: center; background: #1a1a2e; color: white; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+  .obj-weight-tag { display: inline-block; background: #e74c3c; color: white; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+  .obj-text { font-size: 14px; font-weight: 600; color: #1a1a2e; line-height: 1.6; }
+
+  .kr-list { margin-top: 10px; }
+  .kr-item { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #555; padding: 8px 12px; margin-bottom: 6px; background: white; border-radius: 8px; border-left: 3px solid #3498db; line-height: 1.5; transition: background 0.2s; }
+  .kr-item:hover { background: #f0f7ff; }
+  .kr-num { color: #3498db; font-weight: 600; white-space: nowrap; flex-shrink: 0; font-size: 12px; }
+
+  /* ===== 承接对齐 ===== */
+  .align-section { margin-bottom: 32px; }
+  .align-head-obj { background: linear-gradient(135deg, #fff5f5, #fff); border: 2px solid #e74c3c; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+  .align-head-label { font-size: 11px; color: #e74c3c; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .align-head-text { font-size: 15px; font-weight: 700; color: #1a1a2e; line-height: 1.5; }
+  .align-head-krs { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .align-head-kr { font-size: 12px; color: #777; padding: 6px 10px; background: rgba(231,76,60,0.06); border-radius: 6px; }
+
+  .align-child-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 14px; margin-left: 40px; position: relative; }
+  .align-child-grid::before { content: ''; position: absolute; left: -20px; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, #e74c3c, #3498db); border-radius: 2px; }
+  .align-child-card { background: white; border: 1px solid #e8f0fe; border-radius: 12px; padding: 16px; border-left: 4px solid #3498db; transition: box-shadow 0.2s; }
+  .align-child-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  .align-child-name { display: inline-block; background: #3498db; color: white; border-radius: 6px; padding: 3px 12px; font-size: 13px; font-weight: 600; }
+  .align-child-dept { display: inline-block; font-size: 11px; color: #888; margin-left: 8px; }
+  .align-child-obj { font-size: 13px; font-weight: 600; color: #1a1a2e; margin-top: 8px; line-height: 1.5; }
+  .align-child-krs { margin-top: 8px; }
+  .align-child-kr { font-size: 11px; color: #666; padding: 4px 0 4px 12px; border-left: 2px solid #ddd; margin-top: 4px; line-height: 1.4; }
+
+  .no-align-box { background: #fff8e1; border: 2px dashed #f0c040; border-radius: 12px; padding: 16px; margin-top: 12px; }
+  .no-align-title { font-size: 14px; font-weight: 700; color: #e67e22; margin-bottom: 6px; }
+  .no-align-text { font-size: 12px; color: #888; }
+
+  /* 二级承接 */
+  .l2-section { background: linear-gradient(135deg, #e8faf0, #fff); border: 2px solid #2ecc71; border-radius: 14px; padding: 24px; margin-top: 24px; }
+  .l2-title { font-size: 16px; font-weight: 700; color: #27ae60; margin-bottom: 12px; }
+  .l2-card { background: white; border-radius: 10px; padding: 14px; margin-bottom: 10px; border-left: 4px solid #2ecc71; }
+  .l2-from { display: inline-block; background: #2ecc71; color: white; border-radius: 4px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
+
+  /* 跨部门协同 */
+  .cross-section { background: linear-gradient(135deg, #fce4ec, #fff); border: 2px solid #e91e63; border-radius: 14px; padding: 24px; margin-top: 24px; }
+  .cross-title { font-size: 16px; font-weight: 700; color: #c2185b; margin-bottom: 12px; }
+  .cross-card { background: white; border-radius: 10px; padding: 14px; margin-bottom: 10px; border-left: 4px solid #e91e63; }
+  .cross-from { display: inline-block; background: #e91e63; color: white; border-radius: 4px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
+
+  /* ===== 分析报告 ===== */
+  .report-section { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid #e5e7eb; }
+  .report-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; }
+  .issue-card { padding: 14px 16px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid; transition: transform 0.15s; }
+  .issue-card:hover { transform: translateX(4px); }
+  .issue-card.critical { background: #fff5f5; border-left-color: #e74c3c; }
+  .issue-card.warning { background: #fffcf0; border-left-color: #f39c12; }
+  .issue-card.info { background: #f0f7ff; border-left-color: #3498db; }
+  .issue-card.good { background: #f0fff4; border-left-color: #2ecc71; }
+  .issue-level { font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+  .issue-level.critical { color: #e74c3c; }
+  .issue-level.warning { color: #f39c12; }
+  .issue-level.info { color: #3498db; }
+  .issue-level.good { color: #2ecc71; }
+  .issue-title { font-size: 14px; font-weight: 600; color: #1a1a2e; margin-bottom: 4px; }
+  .issue-desc { font-size: 13px; color: #555; line-height: 1.6; }
+
+  .coverage-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .coverage-table th, .coverage-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+  .coverage-table th { background: #f8f9fa; font-weight: 600; color: #555; font-size: 12px; }
+  .coverage-table td { color: #333; }
+  .tag-yes { display: inline-block; background: #2ecc71; color: white; border-radius: 4px; padding: 1px 8px; font-size: 11px; }
+  .tag-no { display: inline-block; background: #e74c3c; color: white; border-radius: 4px; padding: 1px 8px; font-size: 11px; }
+  .tag-partial { display: inline-block; background: #f39c12; color: white; border-radius: 4px; padding: 1px 8px; font-size: 11px; }
+  .tag-na { display: inline-block; background: #bdc3c7; color: white; border-radius: 4px; padding: 1px 8px; font-size: 11px; }
+
+  /* 映射矩阵 */
+  .matrix-row { display: flex; align-items: stretch; gap: 12px; margin-bottom: 20px; }
+  .matrix-head { flex: 0 0 220px; border-radius: 10px; padding: 14px 16px; border: 2px solid; display: flex; flex-direction: column; justify-content: center; }
+  .matrix-head-label { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .matrix-head-desc { font-size: 13px; color: #444; line-height: 1.5; }
+  .matrix-arrow { flex: 0 0 30px; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 20px; }
+  .matrix-children { flex: 1; display: flex; flex-wrap: wrap; gap: 10px; }
+  .matrix-child { flex: 1 1 120px; min-width: 0; border: 2px solid; border-radius: 10px; padding: 12px 14px; background: white; overflow: hidden; }
+  .matrix-child-name { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .matrix-child-detail { font-size: 12px; color: #555; line-height: 1.5; margin-bottom: 4px; word-break: break-all; }
+  .matrix-child-weight { font-size: 12px; color: #999; }
+
+  /* 搜索 */
+  .search-bar { display: flex; gap: 12px; margin-bottom: 20px; }
+  .search-input { flex: 1; padding: 8px 14px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.2s; }
+  .search-input:focus { border-color: #3a7a4f; box-shadow: 0 0 0 1px #3a7a4f; }
+
+  @media (max-width: 768px) {
+    .stats-row { grid-template-columns: repeat(3, 1fr); }
+    .align-child-grid { grid-template-columns: 1fr; margin-left: 16px; }
+    .align-head-krs { grid-template-columns: 1fr; }
+    .tabs { flex-wrap: wrap; }
+    .tab { font-size: 13px; padding: 10px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>AI产品中心 OKR 承接关系全景</h1>
+  <p>2026年H1（1月-6月） · 中心负责人：陈海彪 · 共9人 · 110条 Key Results</p>
+</div>
+
+<div class="container">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num red">9</div><div class="stat-label">团队总人数</div></div>
+    <div class="stat-card"><div class="stat-num blue">4</div><div class="stat-label">陈海彪 Objectives</div></div>
+    <div class="stat-card"><div class="stat-num green">27</div><div class="stat-label">团队总 Objectives</div></div>
+    <div class="stat-card"><div class="stat-num purple">110</div><div class="stat-label">总 Key Results</div></div>
+    <div class="stat-card"><div class="stat-num orange">7</div><div class="stat-label">下属部门/方向</div></div>
+    <div class="stat-card"><div class="stat-num teal">3</div><div class="stat-label">承接层级</div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab(this,'hierarchy')">层级承接图</div>
+    <div class="tab" onclick="switchTab(this,'detail')">个人OKR明细</div>
+    <div class="tab" onclick="switchTab(this,'alignment')">承接对齐视图</div>
+    <div class="tab" onclick="switchTab(this,'report')">分析报告</div>
+  </div>
+
+  <!-- ===================== TAB 1: 层级图 ===================== -->
+  <div id="hierarchy" class="tab-content active">
+    <div class="tree-wrapper">
+      <h2 class="section-title">OKR 承接层级关系图</h2>
+      <p class="section-desc">虚线箭头表示OKR承接（对齐）方向：下级 → 上级。红色为中心级，其余颜色为各团队一/二级承接。</p>
+      <svg id="treeSvg" viewBox="0 0 1200 800" style="width:100%;height:auto;min-height:500px;font-family:inherit;"></svg>
+    </div>
+    <div class="tree-wrapper" style="margin-top:24px;">
+      <h2 class="section-title">OKR 承接映射矩阵</h2>
+      <p class="section-desc">陈海彪中心级Objective → 各团队成员承接分布</p>
+      <div id="matrixContent"></div>
+    </div>
+  </div>
+
+  <!-- ===================== TAB 2: 明细 ===================== -->
+  <div id="detail" class="tab-content">
+    <h2 class="section-title">个人 OKR 明细</h2>
+    <p class="section-desc">完整展示每位成员的所有 Objective 和 Key Result，含权重与对齐信息</p>
+    <div class="search-bar">
+      <input type="text" class="search-input" id="detailSearch" placeholder="搜索人员、Objective 或 KR 关键词..." oninput="filterDetail(this.value)">
+    </div>
+    <div id="detailContent"></div>
+  </div>
+
+  <!-- ===================== TAB 3: 对齐 ===================== -->
+  <div id="alignment" class="tab-content">
+    <h2 class="section-title">OKR 承接对齐映射</h2>
+    <p class="section-desc">以陈海彪4个中心级OKR为主线，展示各团队成员如何承接</p>
+    <div id="alignContent"></div>
+  </div>
+
+  <!-- ===================== TAB 4: 报告 ===================== -->
+  <div id="report" class="tab-content">
+    <h2 class="section-title">OKR 承接完整性分析报告</h2>
+    <p class="section-desc">基于数据分析OKR承接覆盖度、权重合理性、内容缺失及修订建议</p>
+    <div id="reportContent"></div>
+  </div>
+</div>
+
+<script>
+// ===================== DATA =====================
+const data = {
+  "陈海彪": {
+    dept:"AI产品中心", role:"中心负责人", level:0, alignTo:null, color:"red",
+    objectives: [
+      { id:"CHB-O1", text:"围绕金山生态体系构筑领域根据地，法律审查产品力达到行业领先（营收千万），走通游戏场景的agent产品实践", weight:"35%",
+        krs:["【商业化】通过与WPS、云的深度合作，同时整合生态能力，至少完成5个标杆客户的落地。","【产品力】通过产品力深度打磨实现审查产品行业领先，审查效果高于案牍、法天使等头部竞品。","【效率】从1到10审查能力横向扩展效率提升，单类审查对象建设周期从2月提升至2周。","【方向探索】深入西山居/世游核心业务，通过运营知识助手、AI Coding + 知识库、AI NPC三大场景落地，探索出一条游戏+AI产品模式。"]},
+      { id:"CHB-O2", text:"以原子产品为核心竞争力，走通公私双域商业化模式，并通过内部赋能探索场景agent应用", weight:"25%",
+        krs:["【公有云】Q1，围绕公有云生态，走通原子产品带动公有云Token模式，获得带动的增长曲线。","【私有云】围绕信创智算生态，与政企联合开发，走通核心原子产品私有化轻交付落地模式，H1至少完成 1-2个项目轻交付。","【内部赋能】通过瀚海平台支撑集团与子公司使用，孵化具备对外输出3个最佳业务场景解决方案 ，并从中孵化出至少1个可对外进行标准化输出的解决方案或SaaS应用。","【服务闭环】建立覆盖内外部项目的运维体系化管理标准和能力（SOP/SLA），保障项目验收通过率， 且运营问题在 24 小时内闭环解决。"]},
+      { id:"CHB-O3", text:"构建以\u201cMiMo模型 + 上下文工程\u201d为双核的大模型生态基座，攻坚核心技术能力产品应用落地", weight:"30%",
+        krs:["【MiMo】构建以MiMo为核心的1+N模型底座能力，实现MoE训练及评测工程化落地与推理小型化专项能力提升（MoE LoRA训练效率比SFT提升50%，小型化性能领域能力精度误差控制在2%以内）。","【DR】推动通用Deep Research从研发走向规模化落地，确立产品在复杂场景下的市场领先优势（Q2效果提升不低于15%，应用场景不少于3个）。","【RAG+记忆】提升知识库底层能力，从0到1解决复杂多跳Query查询任务；构建标准化的持久记忆模块，关键信息（用户、Agent）的F值达到75%以上。","【Agent任务】【探索性】完成\u201c复杂任务目标追踪\u201d的验证，压缩小于3轮后目标流失率控制在 15% 以内。","【Agent应用】【探索性】结合先进个人助理Agent框架，完善工程和产品化、适配金山体系，结合自身实践构建易用\u201cAI助理\u201d原型产品，实现3类个人助理应用场景的闭环落地，推广到部门外应用。"]},
+      { id:"CHB-O4", text:"构建\u201cAI Native\u201d的独立作战组织，打破产研边界，建立商业闭环能力的创业型铁军", weight:"10%",
+        krs:["【商务闭环】 Q1完成独立销售核心团队组建，建立独立的商机拓展与考核激励机制，改变单纯依赖集团或金山云输送商机的被动局面，并在Q2独立挖掘至5个有效商机。","【战区协同】 确立\u201c战区责任制\u201d，Q1明确各战区经营指标与权责边界，实现需求从收集到交付的端到端闭环，决策链路缩短50%。","【AI Native】以自研产品技术应用为核心，提升团队AI浓度，探索一人AI应用模式，落地不低于3个应用成果，并培育不少于5名能独立完成\u201c前端+后端+产品\u201d闭环的\u201c超级员工\u201d。","【人才梯队】 深化\u201c产学研\u201d人才战略，依托武大/华科等T1高校合作，启动\u201cAI特训班\u201d常态化运作，定向引进高潜应届生/实习生，完成核心技术岗位的年轻化人才储备，打造面向未来的AI人才源动力。"]}
+    ]
+  },
+  "王亚洲": {
+    dept:"产品部", role:"产品负责人", level:1, alignTo:"陈海彪", color:"blue",
+    objectives: [
+      { id:"WYZ-O1", text:"依托WPS与生态体系，打造法律审查产品商业化标杆，实现全年千万级营收闭环", weight:"40%", alignObjId:"CHB-O1",
+        krs:["【渠道就绪】 6月30日前，完成合同审查产品在WPS企业端（SaaS及私有化）的正式发布与深度集成，确保产品全面达到\u201c可见、可售、可用\u201d状态","【公审攻坚】6月30日前，启动北京、甘肃、山西等省级公审系统的重点攻坚，确保至少中标1个省级标杆客户并启动交付","【基建与弹药】3月31日前，完成专项审查标准化解决方案白皮书定稿，并发布售前咨询、实施部署、售后服务的全流程标准化作业程序（SOP）"]},
+      { id:"WYZ-O2", text:"核心产品力与系统稳定性全面超越头部竞品，实现产研团队全链路提效", weight:"40%", alignObjId:"CHB-O1",
+        krs:["【核心效果突围】5月30日前，完成3-5个高频合同类型的定向调优。在专业评测中，定位、风险识别、意见生成的准确率核心指标 100% 优于案牍与法天使","【AI Native 体验】 6月30日前，实现与WPS文档修改能力的深度融合并发布全新版本，跑通\u201c一键修订\u201d闭环","【研发产能扩张】4月30日前，全面跑通\u201c评测驱动\u201d的研发流水线，验证范式可复制性，将新增合同类型（如工程、劳动、知产协议）的模型建设与上线周期稳定控制在 2周（14天） 以内","【底座稳定性】4月30日前，完成核心稳定性指标的集中攻坚，保障系统整体SLA达到 99%，审查任务成功率稳定在 ≥90%"]},
+      { id:"WYZ-O3", text:"联合顶尖法律实验室完成前沿业务共创，跑通并发布创新商业化MVP", weight:"20%", alignObjId:"CHB-O1",
+        krs:["【大成实验室POC】4月30日前，完成非诉讼纠纷解决机制的探索，输出\u201cAI调解助手\u201d原型，覆盖金融等高频纠纷场景的调解流程管理","【武大实验室POC】6月30日前，完成行政规范文件审查/泛合规方向等的可行性验证，输出场景分析报告并完成 Agent Demo 搭建","【MVP发布与种子池】6月30日前，从上述两个方向中优选1个商业化路径最清晰的场景，正式发布产品MVP，并完成首批种子用户的引入与试用报告输出","【商业化规划】6月30日前，基于MVP的试用反馈，探索技术服务费或按结果付费等创新模式，输出针对下半年的商业化路径规划书"]}
+    ]
+  },
+  "袁小龙": {
+    dept:"商业化部", role:"商业化负责人", level:1, alignTo:"陈海彪/王亚洲", color:"pink",
+    objectives: [
+      { id:"YXL-O1", text:"打造 WPS \u201c合同审查\u201d标杆产品，通过首批签约客户，验证商业模式并具备规模化扩张基础。", weight:"40%", alignObjId:"CHB-O1",
+        krs:["【上线与体验】 完成自研合同审查产品在WPS应用市场上线，任务处理（风险定位、风险评级、修改建议）准确率 > 90%。","【市场验证】 达成15家潜在商机池建设、3家标杆客户签约，处理用户超500份以上合同。","【规模化准备】 完成标准化销售工具包（WPS法律版）1.0 版，并对核心渠道/销售团队完成 100% 的赋能培训。"]},
+      { id:"YXL-O2", text:"实现\u201c公平竞争审查\u201d产品商业化破局，验证从获客到交付的全链路闭环。", weight:"30%", alignObjId:"CHB-O1",
+        krs:["【市场准入与样板打造】 推动签约1家代表性客户（如：北京、甘肃、山西省级/市级市场监管局），实现首单合同落地。","【业务价值验证】 产品深度覆盖《公平竞争审查条例》中定义的审查标准，通过 AI 辅助使客户单篇存量文件审查耗时降低 50% 以上，漏报和误报率低于10%。","【验证可复制性】沉淀一套标准化的《公平竞争审查产品手册》及《销售话术》，并储备3个高质量潜在客户。"]},
+      { id:"YXL-O3", text:"成功打造\u201c法律调解\u201d行业标杆产品，通过核心业务闭环验证，构建可复制的商业化推广模式。", weight:"30%", alignObjId:"CHB-O1",
+        krs:["【验证\u201c能办案\u201d】 完成法律调解全流程功能上线，覆盖从\u201c案件受理、在线调解、协议生成\u201d到\u201c司法确认\u201d的完整链路，实现调解文书自动生成准确率 > 95%。","【验证\u201c有人买\u201d】成功签约 1家行业标杆客户（如：大成律所），并实现单人调解案件数量（或效率）提升30%。","【验证\u201c能卖动\u201d】沉淀针对个人不良资产处置领域的标准化调解策略库，并完成销售拓客包建设（包含案例白皮书、标准报价体系及交付 SOP）。"]}
+    ]
+  },
+  "张帅": {
+    dept:"瀚海平台部", role:"平台负责人", level:1, alignTo:"陈海彪", color:"purple",
+    objectives: [
+      { id:"ZS-O1", text:"【上云】围绕公有云生态，走通原子产品带动公有云Token模式，获得带动的增长曲线。", weight:"25%", alignObjId:"CHB-O2",
+        krs:["Q1完成知识库、记忆两个子产品API形式上云，Q2配合公有云2-3个客户拓展；建立上云子产品（知识库、记忆体）需求迭代机制，收集试点客户核心需求完成率100%","Q1完成子产品（知识库、记忆体）完整定义（明确功能边界、核心价值等）及设计，输出产品定义文档并完成评审定稿；推进产品开发工作并于Q2实现知识库、记忆体子产品顺利落地。","Q1制定所有上云子产品（知识库、记忆体）的定价策略（贴合Token兑换规则），输出正式定价文档；Q2建立子产品计量体系，兼顾各子产品独立计量与平台整体计量，获得子产品带动token增长曲线；","建立规范的公有云迭代上线、升级机制，明确迭代周期、升级流程、质量管控及风险应对方案；保障子产品与公有云生态高效协同、稳定运行。"]},
+      { id:"ZS-O2", text:"【内部赋能】通过瀚海平台支撑集团与子公司使用，孵化具备对外输出的3个最佳业务场景解决方案，并从中孵化出至少1个可对外进行标准化输出的解决方案或SaaS应用。", weight:"25%", alignObjId:"CHB-O2",
+        krs:["聚焦瀚海应用平台核心竞争力建设，Q1完成 Multiagent 功能开发及多智能体评测能力的设计；Q2推进评测优化、文件上传大小、输出格式规范等核心能力开发落地，功能测试通过率 100%。","平台基础管理能力提升，支持平台问答助手、AI网关升级；问答助手平台功能问题解决率≥80%，AI网关实现权限精细化管控，接口调用安全性≥99.99%，H1完成全部优化；","探索HR场景的创新应用，Q1输出调研报告，并完成内部评审；Q2明确MVP版本核心功能边界，完成原型设计、核心功能开发及基础测试。","基于平台已有应用，筛选5个高频、高价值业务场景，完成每个场景的解决方案梳理、优化，形成完整方案文档（含实施流程、适配条件、效果预期），其中至少2个解决方案/应用上线市场，对外提供。","搭建瀚海平台专属运营体系，组建专属运营支撑小组，建立集团与子公司需求对接、问题反馈、使用指导的常态化机制，响应延迟≤2小时；H1开展不少于2场集团及子公司平台使用赋能培训，"]},
+      { id:"ZS-O3", text:"【服务闭环】建立覆盖内外部项目的运维体系化管理标准和能力（SOP/SLA），保障项目验收通过率， 且运维问题在 24 小时内闭环解决。", weight:"25%", alignObjId:"CHB-O2",
+        krs:["建立覆盖内外部项目全生命周期（部署、监控、故障处理、售后）的运维SOP标准，包含至少15个核心运维场景的操作流程、责任分工、验收标准，Q2末完成SOP文档编制并落地推行，运维人员SOP知晓率100%。","制定内外部项目运维SLA服务标准，明确不同等级项目（核心/普通）的响应时间、故障解决时限、服务质量要求，与所有合作外部客户、内部业务方就SLA协议达成一致，SLA达标率≥95%。","搭建基础可观测性，覆盖用户、资源、服务、模型等50+核心观测指标，同时落地链路追踪功能；实现故障提前预警（预警准确率≥60%），故障发现时间≤10分钟。","围绕内外部项目非功能需求（稳定性、安全性、性能、兼容性、可扩展性），建立全流程专项保障机制；定期开展非功能专项测试，H1完成非功能测试不少于3次，测试覆盖率100%；确保核心项目系统稳定性≥99.9%、安全漏洞修复时间≤3天，发现问题100%解决，H1无重大非功能性故障发生，全面支撑服务闭环落地。","建立运营问题闭环管控机制，明确问题分级（核心/普通/咨询），核心问题1小时内分派，8小时内解决，普通及咨询类问题24小时内闭环；搭建问题闭环监控台账，实时跟踪处理进度，超时问题预警率100%；全年内外部运营问题24小时闭环率稳定≥99.5%，超时闭环案例≤3起。"]},
+      { id:"ZS-O4", text:"【私有云】围绕信创智算生态，与政企联合开发，走通核心原子产品私有化轻交付落地模式，H1至少完成 1-2 个项目轻交付。", weight:"15%", alignObjId:"CHB-O2",
+        krs:["与政企事业部联合开发，共建信创智算生态构，明确联合开发内容、信创适配标准、私有化交付要求及生态联动机制；每Q开展1次生态合作沟通会。","制定完善的私有化卸载交付策略，明确交付中保留的核心服务，实现基础模型平台、应用平台模块化拆分；H1配合政企事业部完成1-2个项目的交付。","搭建并完善瀚海平台五个市场（应用、智能体、Skill、模型、工具）的产品使用流程及配套功能；丰富市场内容，完成现有搭建应用的全面梳理，筛选优质内容作为内置对外提供（智能体≥15个，应用≥3个）。","Q1: 完成推理核心技术能力适配与优化（如推理支持 vGPU）；Q2: 完善算力相关技术支撑体系，提升国产化适配、算力管控及功能兼容能力；"]},
+      { id:"ZS-O5", text:"【内部创新】人人都有创新（智能体应用），孵化探索测试方向（AI测试员工）、产品设计方向（自然语言到原型）、组织变革方向（OTEAM）", weight:"10%", alignObjId:null,
+        krs:["推动全体团队成员参与智能体应用创新搭建，实现全员覆盖、人人有成果。团队每位成员全年至少独立完成1个智能体应用搭建，确保100%成员达成；","孵化测试 AI 员工，测试流程创新，使用 AI 完成自动化及增量自动化生成和验证能力，H1替换 25% 的人力","OTEAM快速完善客户端，team内全员使用，打磨管理能力内化的效果","产品设计流程创新，以AI工具赋能产品流程，聚焦原型输出提效，推动全体产品经理运用AI原型设计工具，构建赋能提效体系；每位产品使用新流程至少落地一次原型输出；实现终稿周期缩短30%的目标；","全面应用 AI 辅助瀚海平台研发（AI 赋能接口设计、API Fox MCP + Cursor 实现\u201c文档即代码\u201d的极速无缝转化、AI 生成单元用例），实现提效又提质，提测前 API 设计文档 80% 达标，且单接口单元测试通过率达到 80%"]}
+    ]
+  },
+  "周一新": {
+    dept:"模型技术部", role:"模型负责人", level:1, alignTo:"陈海彪", color:"teal",
+    objectives: [
+      { id:"ZYX-O1", text:"O1：构建以MiMo为核心的1+N模型底座能力，实现训练及评测工程化落地与推理小型化专项能力提升，支撑AI模型底座能力迭代升级", weight:"30%", alignObjId:"CHB-O3",
+        krs:["完成MoE架构的模型后训练及场景能力评测工程化全流程构建，具备训练及评测工程化能力，Q1完成","探索MoE模型的LoRA训练范式，在提升领域能力的同时，保证模型通用能力强于全参sft，训练效率提升50%，Q2完成","实现Qwen 72B/Dense、MiMo/MoE模型小型化专项能力提升，模型尺寸减少2倍以上，推理速度提升50%，领域能力精度误差控制在2%以内，通用能力不低于小型化后同尺寸的模型，Q2完成Dense模型小型化，Q3完成MoE模型小型化"]},
+      { id:"ZYX-O2", text:"推动通用Deep Research从研发走向规模化落地，确立产品在复杂场景下的市场领先优势", weight:"20%", alignObjId:"CHB-O3",
+        krs:["Q1完成通用Deep Research产品化及Mimo 模型在产品侧的落地应用，与瀚海平台集成并通过验收; Q2实现公有云GA发布","提升DR效果，Q2在公开DR评测集（DeepResearch Bench）上实现综合全面性/洞察力等效果指标较 Q1 Baseline 提升 15%，构筑技术护城河。","建立垂直场景接入标准化 SOP，完成 营销场景 专家经验注入与私有数据挂载试点，实现评测效果优于通用竞品 15%"]},
+      { id:"ZYX-O3", text:"结合先进个人助理Agent框架，完善工程和产品化、适配金山体系，结合自身实践探索易用\u201cAI个人助理\u201d", weight:"30%", alignObjId:"CHB-O3",
+        krs:["完善Openclaw等Agent框架，解决重点易用性部署、内部系统对接等基础问题，Q1","围绕日常办公会议安排、日报、周报等日常非coding场景形成不低于5个个人助理应用场景实践，Q1","在集团体系发掘不低于5个种子用户，应用助理产品，Q2"]},
+      { id:"ZYX-O4", text:"依托超级个体委员会驱动，打造\u201c轻舟智汇\u201dAI Native 标杆，实现部门效能跃迁并驱动集团级技术认知与赋能", weight:"20%", alignObjId:"CHB-O4",
+        krs:["组织机制：组建覆盖产研运销核心职能的委员会，固化\u201c周三分享日\u201d机制，常态化开展产品、实践与高阶技术分享（季度累计≥12场），全面拓展轻舟智汇在部门内外的品牌认知。","人才： 建立超级个体认证标准，选拔并培养至少5名具备能独立完成\u201c需求-开发-上线\u201d全链路闭环的超级个体。","赋能： 灵活运用自研产品或开源技术底座，孵化3个具备集团推广潜力的标杆应用，并沉淀15个可复用的最佳实践案例（SOP/模板）。","覆盖与活跃： 建立部门级AI度量体系，驱动全员 AI 工具周活跃度稳定在85%以上，核心业务场景AI渗透率达 100%。"]}
+    ]
+  },
+  "陈斌": {
+    dept:"应用技术部", role:"应用技术负责人", level:1, alignTo:"陈海彪", color:"orange",
+    objectives: [
+      { id:"CB-O1", text:"完成上下文工程中枢搭建，沉淀\u201c最强知识管线\u201d，驱动Agent业务效果实现质的飞跃", weight:"55%", alignObjId:"CHB-O3",
+        krs:["构建标准化的持久记忆模块，关键信息（用户、Agent）的F值达到75%以上，完成上云","提升知识库能力，结合用户反馈优化速度和效果，从0到1解决复杂多跳Query查询任务，完成云上业务支撑","[探索性]完成\u201c复杂任务目标追踪\u201d的验证，压缩小于3轮后目标流失率控制在 15% 以内"]},
+      { id:"CB-O2", text:"打造 AI 原生研发模式，实现组织研发效能的倍数级突破", weight:"30%", alignObjId:"CHB-O3",
+        krs:["基于业务抽象AI组件，抽象不少于10个组件成为通用skill/mcp","赋能团队实现跨界研发转型，确保不少于 2 位员工能利用 AI 工具完成端到端产品模块研发","[探索性][技术产品]结合先进个人助理Agent框架，完善工程和产品化、适配金山体系，结合自身实践构建易用\u201cAI助理\u201d原型产品，实现3类个人助理应用场景的闭环落地，推广到部门外应用"]},
+      { id:"CB-O3", text:"构建敏捷研发协同矩阵，保障业务线高质交付与人才梯队储备", weight:"15%", alignObjId:"CHB-O4",
+        krs:["建立\u201c特种兵\u201d响应机制，支撑业务攻坚","保障分布式团队的研发规范与氛围，确保技术能力同步","深化高校联动，建立 AI 专项人才蓄水池"]}
+    ]
+  },
+  "陈凯": {
+    dept:"创新技术部", role:"创新技术负责人", level:1, alignTo:"陈海彪", color:"green",
+    objectives: [
+      { id:"CK-O1", text:"游戏AI：树立标杆，知识库+AI 运营生产提效，探索游戏AI新玩法", weight:"80%", alignObjId:"CHB-O1",
+        krs:["剑网3/尘白/剑零 可用率 90%，落地用户运营管线","打磨牌乐门知识结合AI Coding，大幅提升新玩法开发效率","共创剑心 AI NPC 新玩法，提升玩家体验，带留存时长"]},
+      { id:"CK-O2", text:"构建AI团队技术影响力，", weight:"20%", alignObjId:"CHB-O4",
+        krs:["对外 AI 技术和业务交流","AI 特训班，推进校企合作，武大华科"]}
+    ]
+  },
+  "袁伟": {
+    dept:"技术保障部", role:"技术保障负责人", level:2, alignTo:"陈海彪/周一新/张帅", color:"green",
+    objectives: [
+      { id:"YW-O1", text:"依托超级个体委员会驱动，打造\u201c轻舟智汇\u201dAI Native 标杆，实现部门效能跃迁并驱动集团级技术认知与赋能", weight:"10%", alignObjId:"ZYX-O4",
+        krs:["【组织与机制】组建覆盖产研运销测 5 大核心职能的委员会，固化\u201c周三分享日\u201d机制，常态化开展产品、实践与高阶技术分享（季度累计≥12场），全面拓展轻舟智汇在部门内外的品牌认知。","【人才选拔】建立超级个体认证标准，选拔并培养至少5名具备能独立完成\u201c需求-开发-上线\u201d全链路闭环的超级个体。","【应用赋能】灵活运用自研产品或开源技术底座，孵化3个具备集团推广潜力的标杆应用，并沉淀15个可复用的最佳实践案例（SOP/模板）。","【覆盖与活跃】建立部门级AI度量体系，驱动全员 AI 工具周活跃度稳定在85%以上，核心业务场景AI渗透率达 100%。"]},
+      { id:"YW-O2", text:"构建高可用架构与标准化体系，确保全场景交付稳定性", weight:"40%", alignObjId:"ZS-O3",
+        krs:["【稳定性保障】基于全业务组件高可用适配、全组件数据备份恢复与环境快照等，达成云上交付稳定性 99.9%，私有化交付稳定性 99%，保证SLA达标率 ≥99.5%。","【CI/CD 全链路串联】优化持续集成平台，实现代码提交-打包-环境部署-自动化全链路自测一键式闭环。","【标准化规范】建立统一的 SOP 标准库，涵盖应急预案、系统架构、交付文档、验收标准及售后维保（SLA），实现私有化交付环境 100% 符合基线规范。","【安全审计闭环】统筹云上多租户认证与私有化环境操作审计，确保系统、服务、操作审计全覆盖符合内审标准，年度无P0 、P1级安全事故。"]},
+      { id:"YW-O3", text:"深化 AI 助手与自动化工具链，提升云上迭代与私有化交付时效", weight:"30%", alignObjId:"ZS-O3",
+        krs:["【敏捷运维】落地全链路可观测性与智能巡检，利用 AI 运维助手实现核心指标监控精细化，提前预警准确率≥60%，故障发现时间≤10分钟。","【敏捷迭代】构建 AI迭代助手，实现云上敏捷部署与功能迭代，全业务组件覆盖，保证单组件变更时长&lt;10分钟。","【优化交付】构建 AI交付助手，快速产出交付物，达成客户环境可一键交付，3级版本交付时长控制在4小时内，2级版本交付时长控制在1天内。","【智能售后】： 构建 AI 售后助手，建立私有化故障诊断知识库与云上工单自动分派，使售后响应速度与分析时长缩短至分钟级。"]},
+      { id:"YW-O4", text:"实施精细化资源治理、成本可见与质量可控", weight:"20%", alignObjId:null,
+        krs:["【资源治理】建立云上资源可视化观测大屏，实时监控资源利用率，通过监控核心指标(资源调度效率，代码执行效率等衡量指标)，评估业务使用合理性并推动业务整改，保证平均卡时占用率 ≥70%。","【成本管控】：梳理云上整体资源（网络、存储、计算等），推进资源整合与闲置资源退订，在原基础上成本降低 5%。","【私有化资源评估】： 建立私有化交付的成本核算模型与资源建议标准，实现前置成本评估 100% 覆盖，确保交付方案的能效比最优。"]}
+    ]
+  },
+  "张坤": {
+    dept:"业务管理部", role:"业务BP", level:1, alignTo:"陈海彪", color:"cyan",
+    objectives: [
+      { id:"ZK-O1", text:"深度配合 COE，保障 HR 核心项目高效落地，支撑组织与人才战略", weight:"40%", alignObjId:"CHB-O4",
+        krs:["承接 COE 年度核心项目（绩效周期管理、晋升评审、培训体系落地、文化建设、预算管理等），负责部门全流程推进与执行，确保 100% 按 COE 标准与节点交付，业务侧满意度≥95%（无有效投诉）；","完成部门的人才盘点等工作，输出部门级人才数据支撑部门相关人才培养、组织调优等措施，在预算不超的情况下，确保部门内优秀高潜和校招生人才留存率≥95%；","结合业务 AI 提效需求优化部门级落地细则（如绩效中增设 AI 项目贡献维度、培训优先匹配 AI 技能需求、相应人才的招聘等），保证各业务方OKR能够100%落地；"]},
+      { id:"ZK-O2", text:"聚焦业务 AI 提效项目需求，以\u201cAI 青训营 + 人才赋能\u201d为核心，提供精准人才支撑", weight:"30%", alignObjId:"CHB-O4",
+        krs:["\u201cAI青训营\u201d课程体系完全匹配各部门 AI 提效项目实际需求（如法务智能合同审核、研发 AI 辅助编程等），完成 2 期青训营的运营，业务和学员满意度≥4.7/5，结营后 80% 以上学员能直接应用于所在部门 AI 提效项目，业务侧项目支撑认可度≥90%；","针对部门已立项的 AI 项目，开展人才技能缺口调研，输出《AI 提效项目人才赋能清单》，设计定制化轻量化实践或培训（如 AI 工具实操、场景化应用技巧），完成所有 AI 项目核心成员的技能赋能，覆盖 80% 项目组，项目推进效率提升 30%，因人才技能不足导致的项目卡点减少≥80%","筛选高频场景（AI 相关人才招聘筛选、AI 项目人才数据统计、员工 AI 技能培训跟踪、AI 提效项目 HR 需求响应），引入/优化 AI 工具，形成\u201c支撑工具包\u201d，通过AI提升效率 30%，TO DO跟踪自动化率≥70%；"]},
+      { id:"ZK-O3", text:"以PE和业务管理深度参与项目，助力业务一号位提升业务管理效能", weight:"30%", alignObjId:"CHB-O4",
+        krs:["搭建 AI 产品中心「研发 - 商业化」跨团队标准化协同机制，制定需求拆解 SOP、建立周度进度同步会议、开通问题快速响应通道，同步落地 AI 技能赋能与人才保障配套举措；推动跨团队协作效率提升 40%，需求变更沟通成本降低 35%，AI 商业化项目因协同问题导致的延期率降至≤10%。","针对 AI 产品核心商业化场景（智能交互、客户问题处理、自动化生成、B 端定制化输出），设计并迭代标准化 + 场景化 Prompt 模板库，覆盖相关业务场景；"]}
+    ]
+  }
+};
+
+// ===================== COLOR MAPS =====================
+const colorMap = {red:'#e74c3c', blue:'#3498db', green:'#2ecc71', purple:'#9b59b6', orange:'#e67e22', teal:'#1abc9c', pink:'#e91e63', cyan:'#00bcd4'};
+const avatarMap = {red:'avatar-red', blue:'avatar-blue', green:'avatar-green', purple:'avatar-purple', orange:'avatar-orange', teal:'avatar-teal', pink:'avatar-pink', cyan:'avatar-cyan'};
+
+// ===================== DRAW HIERARCHY SVG =====================
+function drawTree() {
+  const svg = document.getElementById('treeSvg');
+
+  const nodes = [
+    {name:"陈海彪", x:480, y:30, w:240, h:80, level:0},
+    {name:"王亚洲", x:5,   y:400, w:160, h:72, level:1},
+    {name:"袁小龙", x:173, y:400, w:160, h:72, level:1},
+    {name:"张帅",   x:341, y:400, w:160, h:72, level:1},
+    {name:"周一新", x:509, y:400, w:160, h:72, level:1},
+    {name:"陈斌",   x:677, y:400, w:160, h:72, level:1},
+    {name:"陈凯",   x:845, y:400, w:160, h:72, level:1},
+    {name:"张坤",   x:1013,y:400, w:160, h:72, level:1},
+    {name:"袁伟",   x:440, y:660, w:180, h:72, level:2}
+  ];
+
+  let html = `<defs>
+    <filter id="shadow"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-opacity="0.12"/></filter>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#aaa"/></marker>
+    <marker id="arr-g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2ecc71"/></marker>
+    <marker id="arr-p" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#e91e63"/></marker>
+  </defs>`;
+
+  // Draw connections from head to level 1
+  const head = nodes[0];
+  nodes.filter(n => n.level===1).forEach(n => {
+    const x1 = head.x + head.w/2, y1 = head.y + head.h;
+    const x2 = n.x + n.w/2, y2 = n.y;
+    const midY = (y1 + y2) / 2;
+    html += `<path d="M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}" fill="none" stroke="#bbb" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arr)"/>`;
+  });
+
+  // Draw cross-alignment: 袁小龙 ↔ 王亚洲 (curved arc below cards)
+  const wyz = nodes[1]; // 王亚洲
+  const yxl = nodes[2]; // 袁小龙
+  const arcX1 = wyz.x + wyz.w/2, arcX2 = yxl.x + yxl.w/2;
+  const arcBottom = wyz.y + wyz.h;
+  const arcMidX = (arcX1 + arcX2) / 2;
+  html += `<path d="M${arcX1},${arcBottom} Q${arcMidX},${arcBottom+45} ${arcX2},${arcBottom}" fill="none" stroke="#e91e63" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arr-p)"/>`;
+  html += `<text x="${arcMidX}" y="${arcBottom+38}" text-anchor="middle" font-size="11" fill="#e91e63" font-weight="600">协同</text>`;
+
+  // Draw connections from level 1 to level 2 (袁伟)
+  const yuan = nodes[8];
+  const zhouNode = nodes[4]; // 周一新
+  const zhangNode = nodes[3]; // 张帅
+  const x2 = yuan.x + yuan.w/2, y2 = yuan.y;
+  [zhouNode, zhangNode].forEach(n => {
+    const x1 = n.x + n.w/2, y1 = n.y + n.h;
+    const midY = (y1 + y2) / 2;
+    html += `<path d="M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}" fill="none" stroke="#2ecc71" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arr-g)"/>`;
+  });
+
+  // Draw nodes
+  nodes.forEach(n => {
+    const p = data[n.name];
+    const c = colorMap[p.color];
+    const objCount = p.objectives.length;
+    const krCount = p.objectives.reduce((s,o)=>s+o.krs.length, 0);
+
+    html += `<g style="cursor:pointer" onclick="goToDetail('${n.name}')">`;
+    html += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="14" fill="${c}" filter="url(#shadow)"/>`;
+    html += `<text x="${n.x+n.w/2}" y="${n.y+26}" text-anchor="middle" fill="white" font-size="17" font-weight="700">${n.name}</text>`;
+    html += `<text x="${n.x+n.w/2}" y="${n.y+44}" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="12">${p.dept} · ${p.role}</text>`;
+    html += `<text x="${n.x+n.w/2}" y="${n.y+60}" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="11">${objCount}个O · ${krCount}个KR</text>`;
+    html += `</g>`;
+  });
+
+  // Draw objective summaries for 陈海彪
+  const chbObjs = data["陈海彪"].objectives;
+  const summaryX = 20, summaryY = 140;
+  html += `<rect x="${summaryX}" y="${summaryY}" width="1160" height="220" rx="10" fill="#fafafa" stroke="#eee"/>`;
+  html += `<text x="${summaryX+16}" y="${summaryY+22}" font-size="14" font-weight="700" fill="#e74c3c">陈海彪 中心级 OKR：</text>`;
+  const alignInfo = {0:"王亚洲+袁小龙+陈凯", 1:"张帅", 2:"周一新+陈斌", 3:"周一新+陈斌+陈凯+张坤+袁伟"};
+  chbObjs.forEach((obj, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const ox = summaryX + 16 + col * 570;
+    const oy = summaryY + 44 + row * 90;
+    html += `<text x="${ox}" y="${oy}" font-size="13" font-weight="700" fill="#1a1a2e">O${i+1} (${obj.weight})</text>`;
+    // Split text into lines of ~36 chars to fit within half width
+    const maxChar = 36;
+    const line1 = obj.text.substring(0, maxChar);
+    const line2 = obj.text.length > maxChar ? obj.text.substring(maxChar, maxChar*2) : '';
+    const line3 = obj.text.length > maxChar*2 ? obj.text.substring(maxChar*2, maxChar*3) + (obj.text.length > maxChar*3 ? '...' : '') : '';
+    html += `<text x="${ox}" y="${oy+18}" font-size="12" fill="#666">${line1}</text>`;
+    let nextY = oy + 18;
+    if (line2) { nextY += 16; html += `<text x="${ox}" y="${nextY}" font-size="12" fill="#666">${line2}</text>`; }
+    if (line3) { nextY += 16; html += `<text x="${ox}" y="${nextY}" font-size="12" fill="#666">${line3}</text>`; }
+    nextY += 16;
+    html += `<text x="${ox}" y="${nextY}" font-size="11" fill="#999">承接: ${alignInfo[i]}</text>`;
+  });
+
+  svg.setAttribute('viewBox', '0 0 1200 750');
+  svg.innerHTML = html;
+}
+
+// ===================== RENDER MATRIX (HTML) =====================
+function renderMatrix() {
+  const el = document.getElementById('matrixContent');
+  const mapping = [
+    { label:"O1 (35%)", short:"领域根据地/法律审查/游戏Agent", color:"#e74c3c",
+      children:[
+        {name:"王亚洲", detail:"O1(40%)+O2(40%)+O3(20%)=100%", w:"100%"},
+        {name:"袁小龙", detail:"O1(40%)+O2(30%)+O3(30%)=100%", w:"100%"},
+        {name:"陈凯", detail:"O1(80%)", w:"80%"}
+      ]},
+    { label:"O2 (25%)", short:"原子产品/公私双域商业化/内部赋能", color:"#3498db",
+      children:[
+        {name:"张帅", detail:"O1(25%)+O2(25%)+O3(25%)+O4(15%)=90%", w:"90%"}
+      ]},
+    { label:"O3 (30%)", short:"MiMo+上下文工程/大模型基座", color:"#2ecc71",
+      children:[
+        {name:"周一新", detail:"O1(30%)+O2(20%)+O3(30%)=80%", w:"80%"},
+        {name:"陈斌", detail:"O1(55%)+O2(30%)=85%", w:"85%"}
+      ]},
+    { label:"O4 (10%)", short:"AI Native组织/铁军", color:"#9b59b6",
+      children:[
+        {name:"周一新", detail:"O4(20%)", w:"20%"},
+        {name:"陈斌", detail:"O3(15%)", w:"15%"},
+        {name:"陈凯", detail:"O2(20%)", w:"20%"},
+        {name:"张坤", detail:"O1(40%)+O2(30%)+O3(30%)=100%", w:"100%"},
+        {name:"袁伟", detail:"O1(10%) [经周一新]", w:"10%"}
+      ]}
+  ];
+
+  let html = '';
+  mapping.forEach(m => {
+    html += `<div class="matrix-row">`;
+    html += `<div class="matrix-head" style="border-color:${m.color};background:${m.color}11">
+      <div class="matrix-head-label" style="color:${m.color}">${m.label}</div>
+      <div class="matrix-head-desc">${m.short}</div>
+    </div>`;
+    html += `<div class="matrix-arrow">→</div>`;
+    html += `<div class="matrix-children">`;
+    m.children.forEach(c => {
+      const cColor = colorMap[data[c.name].color];
+      html += `<div class="matrix-child" style="border-color:${cColor}">
+        <div class="matrix-child-name" style="color:${cColor}">${c.name}</div>
+        <div class="matrix-child-detail">${c.detail}</div>
+        <div class="matrix-child-weight">承接权重: ${c.w}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  el.innerHTML = html;
+}
+
+// ===================== RENDER DETAIL =====================
+function renderDetail() {
+  const el = document.getElementById('detailContent');
+  const order = ["陈海彪","王亚洲","袁小龙","张帅","周一新","陈斌","陈凯","张坤","袁伟"];
+  let html = '';
+
+  order.forEach(name => {
+    const p = data[name];
+    const isHead = p.level === 0;
+    const totalKR = p.objectives.reduce((s,o)=>s+o.krs.length, 0);
+
+    html += `<div class="person-card ${isHead?'head':''}" style="border-left-color:${colorMap[p.color]}" data-name="${name}" id="person-${name}">`;
+    html += `<div class="person-header">
+      <div class="person-avatar ${avatarMap[p.color]}">${name[0]}</div>
+      <div class="person-info">
+        <h3>${name}</h3>
+        <div class="dept">${p.dept} · ${p.role}</div>
+        ${p.alignTo ? `<div class="align-tag">对齐 → ${p.alignTo}</div>` : '<div class="align-tag" style="background:#fee;color:#e74c3c;">中心最高层级</div>'}
+      </div>
+      <div class="weight-summary">${p.objectives.length} 个 Objective<br>${totalKR} 个 KR<br>权重合计 ${p.objectives.reduce((s,o)=>s+parseInt(o.weight),0)}%</div>
+    </div>`;
+
+    p.objectives.forEach((obj, i) => {
+      html += `<div class="obj-block">
+        <div class="obj-header">
+          <span class="obj-num">O${i+1}</span>
+          <span class="obj-weight-tag">${obj.weight}</span>
+          <span class="obj-text">${obj.text}</span>
+        </div>
+        <div class="kr-list">`;
+      obj.krs.forEach((kr, j) => {
+        html += `<div class="kr-item"><span class="kr-num">KR${j+1}</span> ${kr}</div>`;
+      });
+      html += `</div></div>`;
+    });
+    html += `</div>`;
+  });
+  el.innerHTML = html;
+}
+
+// ===================== FILTER DETAIL =====================
+function filterDetail(keyword) {
+  const cards = document.querySelectorAll('#detailContent .person-card');
+  const kw = keyword.toLowerCase().trim();
+  cards.forEach(card => {
+    if (!kw) { card.style.display = ''; return; }
+    const text = card.textContent.toLowerCase();
+    card.style.display = text.includes(kw) ? '' : 'none';
+  });
+}
+
+// ===================== RENDER ALIGNMENT =====================
+function renderAlignment() {
+  const el = document.getElementById('alignContent');
+  let html = '';
+
+  const headObjs = data["陈海彪"].objectives;
+  const alignMap = {
+    "CHB-O1": [
+      {name:"王亚洲", objIdx:[0,1,2]},
+      {name:"袁小龙", objIdx:[0,1,2]},
+      {name:"陈凯", objIdx:[0]}
+    ],
+    "CHB-O2": [
+      {name:"张帅", objIdx:[0,1,2,3]}
+    ],
+    "CHB-O3": [
+      {name:"周一新", objIdx:[0,1,2]},
+      {name:"陈斌", objIdx:[0,1]}
+    ],
+    "CHB-O4": [
+      {name:"周一新", objIdx:[3]},
+      {name:"陈斌", objIdx:[2]},
+      {name:"陈凯", objIdx:[1]},
+      {name:"张坤", objIdx:[0,1,2]},
+      {name:"袁伟", objIdx:[0]}
+    ]
+  };
+
+  headObjs.forEach((obj, idx) => {
+    const objId = obj.id;
+    html += `<div class="align-section">`;
+
+    // Head objective
+    html += `<div class="align-head-obj">
+      <div class="align-head-label">陈海彪 · O${idx+1} · 权重 ${obj.weight}</div>
+      <div class="align-head-text">${obj.text}</div>
+      <div class="align-head-krs">`;
+    obj.krs.forEach((kr, ki) => {
+      html += `<div class="align-head-kr">KR${ki+1}: ${kr}</div>`;
+    });
+    html += `</div></div>`;
+
+    // Children
+    const aligned = alignMap[objId] || [];
+    if (aligned.length > 0) {
+      html += `<div class="align-child-grid">`;
+      aligned.forEach(a => {
+        const p = data[a.name];
+        a.objIdx.forEach(oi => {
+          const pObj = p.objectives[oi];
+          if (!pObj) return;
+          const childColor = colorMap[p.color];
+          html += `<div class="align-child-card" style="border-left-color:${childColor}">
+            <span class="align-child-name" style="background:${childColor}">${a.name}</span>
+            <span class="align-child-dept">${p.dept} · O${oi+1} (${pObj.weight})</span>
+            <div class="align-child-obj">${pObj.text}</div>
+            <div class="align-child-krs">`;
+          pObj.krs.forEach((kr, ki) => {
+            html += `<div class="align-child-kr">KR${ki+1}: ${kr}</div>`;
+          });
+          html += `</div></div>`;
+        });
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+  });
+
+  // 跨部门协同：袁小龙 ↔ 王亚洲
+  html += `<div class="cross-section">
+    <div class="cross-title">跨团队协同：袁小龙（商业化部）↔ 王亚洲（产品部）</div>
+    <p style="font-size:13px;color:#666;margin-bottom:14px;">袁小龙同时承接陈海彪O1和王亚洲的法律产品方向，负责推动产品落地与客户签约</p>`;
+
+  const crossAligns = [
+    {yxlObjIdx:0, from:"王亚洲", fromObj:"O1: 法律审查产品商业化标杆 (40%)", relation:"合同审查产品WPS上线→袁小龙负责商业化落地与客户签约"},
+    {yxlObjIdx:1, from:"陈海彪", fromObj:"O1: 法律审查产品力行业领先 (35%)", relation:"公平竞争审查→袁小龙开拓政府监管市场新赛道"},
+    {yxlObjIdx:2, from:"王亚洲", fromObj:"O3: 前沿业务共创/创新商业化MVP (20%)", relation:"大成实验室AI调解助手→袁小龙推进商业化签约与推广"}
+  ];
+  crossAligns.forEach(a => {
+    const obj = data["袁小龙"].objectives[a.yxlObjIdx];
+    html += `<div class="cross-card">
+      <span class="cross-from">协同 → ${a.from}</span>
+      <span style="font-size:11px;color:#888;margin-left:10px;">${a.fromObj}</span>
+      <div style="font-size:14px;font-weight:600;margin-top:8px;">${obj.text} (${obj.weight})</div>
+      <div style="font-size:12px;color:#e91e63;margin-top:4px;font-style:italic;">${a.relation}</div>
+      <div style="margin-top:6px;">`;
+    obj.krs.forEach((kr, ki) => {
+      html += `<div style="font-size:12px;color:#666;padding:3px 0 3px 12px;border-left:2px solid #e91e63;margin-top:3px;">KR${ki+1}: ${kr}</div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += `</div>`;
+
+  // 二级承接
+  html += `<div class="l2-section">
+    <div class="l2-title">二级承接关系：袁伟（技术保障部）</div>
+    <p style="font-size:13px;color:#666;margin-bottom:14px;">袁伟同时承接周一新和张帅的OKR，是部门中唯一的二级承接节点</p>`;
+
+  const yuanAligns = [
+    {objIdx:0, from:"周一新", fromObj:"O4: 轻舟智汇AI Native标杆 (20%)"},
+    {objIdx:1, from:"张帅", fromObj:"O3: 服务闭环/运维体系 (25%)"},
+    {objIdx:2, from:"张帅", fromObj:"O3: 服务闭环/运维体系 (25%)"}
+  ];
+  yuanAligns.forEach(a => {
+    const obj = data["袁伟"].objectives[a.objIdx];
+    html += `<div class="l2-card">
+      <span class="l2-from">承接自 → ${a.from}</span>
+      <span style="font-size:11px;color:#888;margin-left:10px;">${a.fromObj}</span>
+      <div style="font-size:14px;font-weight:600;margin-top:8px;">${obj.text} (${obj.weight})</div>
+      <div style="margin-top:6px;">`;
+    obj.krs.forEach((kr, ki) => {
+      html += `<div style="font-size:12px;color:#666;padding:3px 0 3px 12px;border-left:2px solid #2ecc71;margin-top:3px;">KR${ki+1}: ${kr}</div>`;
+    });
+    html += `</div></div>`;
+  });
+
+  // 未对齐的OKR
+  html += `</div>`;
+
+  html += `<div class="no-align-box" style="margin-top:20px;">
+    <div class="no-align-title">未直接对齐部门OKR的条目</div>
+    <div class="no-align-text" style="margin-top:8px;">
+      <strong>张帅 O5 (10%)</strong>：【内部创新】人人都有创新（智能体应用），孵化测试/产品设计/组织变革方向 — <em>无明确对齐</em><br>
+      <strong>袁伟 O4 (20%)</strong>：实施精细化资源治理、成本可见与质量可控 — <em>无明确对齐</em>
+    </div>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+// ===================== RENDER REPORT =====================
+function renderReport() {
+  const el = document.getElementById('reportContent');
+  let html = '';
+
+  // 1. 承接覆盖度分析
+  html += `<div class="report-section">
+    <h3>一、承接覆盖度分析</h3>
+    <table class="coverage-table">
+      <tr><th>陈海彪 Objective</th><th>权重</th><th>承接人</th><th>承接覆盖</th><th>评估</th></tr>
+      <tr>
+        <td>O1: 领域根据地/法律审查/游戏Agent</td><td>35%</td>
+        <td>王亚洲(100%)、<strong style="color:#e91e63">袁小龙(100%)</strong>、陈凯(80%)</td>
+        <td><span class="tag-yes">充分</span></td>
+        <td>王亚洲承接法律审查产品全链路，<strong>袁小龙承接法律商业化落地（合同审查+公平竞争审查+法律调解三大方向）</strong>，陈凯承接游戏场景。商业化闭环完整。</td>
+      </tr>
+      <tr>
+        <td>O2: 原子产品/公私双域商业化</td><td>25%</td>
+        <td>张帅(90%)</td>
+        <td><span class="tag-partial">基本覆盖</span></td>
+        <td>张帅一人承接O2几乎全部内容，存在单点依赖风险</td>
+      </tr>
+      <tr>
+        <td>O3: MiMo+上下文工程/大模型基座</td><td>30%</td>
+        <td>周一新(80%)、陈斌(85%)</td>
+        <td><span class="tag-yes">充分</span></td>
+        <td>周一新负责模型与DR，陈斌负责RAG+记忆+AI组件抽象+AI助理原型，分工清晰且深度承接</td>
+      </tr>
+      <tr>
+        <td>O4: AI Native组织/铁军</td><td>10%</td>
+        <td>周一新(20%)、陈斌(15%)、陈凯(20%)、<strong style="color:#00bcd4">张坤(100%)</strong>、袁伟(10%)</td>
+        <td><span class="tag-yes">充分</span></td>
+        <td>张坤作为业务BP全面承接组织建设，覆盖HR项目、人才赋能、战区协同三大方向。多人参与组织建设形成合力，<strong>袁小龙的商业化团队补充了O4中"商务闭环"的执行能力</strong></td>
+      </tr>
+    </table>
+  </div>`;
+
+  // 2. 商业化承接专项分析
+  html += `<div class="report-section">
+    <h3>二、商业化承接专项分析（新增）</h3>
+
+    <div class="issue-card good">
+      <div class="issue-level good">亮点</div>
+      <div class="issue-title">袁小龙补齐法律商业化闭环，形成"产品→商业化"双轮驱动</div>
+      <div class="issue-desc">
+        <strong>王亚洲（产品侧）</strong>：聚焦法律审查产品力打造、竞品超越、研发流水线优化<br>
+        <strong>袁小龙（商业化侧）</strong>：聚焦合同审查WPS上线、公平竞争审查市场拓展、法律调解标杆签约<br>
+        二者形成互补：王亚洲确保"产品能打"，袁小龙确保"产品能卖"。特别是：<br>
+        • 袁小龙O1（合同审查上线+签约）↔ 王亚洲O1（WPS渠道就绪+标杆客户）— 产品与商务协同<br>
+        • 袁小龙O3（法律调解商业化）↔ 王亚洲O3（大成实验室POC）— 研发与市场协同<br>
+        • 袁小龙O2（公平竞争审查）— 独立开辟政府监管新赛道，拓展法律AI的市场边界
+      </div>
+    </div>
+
+    <div class="issue-card good">
+      <div class="issue-level good">对齐一致</div>
+      <div class="issue-title">袁小龙三大方向合计5家标杆客户，与陈海彪O1目标完全对齐</div>
+      <div class="issue-desc">
+        陈海彪O1-KR1要求"至少完成5个标杆客户的落地"，袁小龙三个Objective的客户目标精确覆盖：<br>
+        • O1（合同审查）：3家标杆客户签约<br>
+        • O2（公平竞争审查）：1家代表性客户签约<br>
+        • O3（法律调解）：1家行业标杆客户签约（大成律所）<br>
+        <strong>合计 3+1+1 = 5家，与中心级目标完全匹配。</strong>
+      </div>
+    </div>
+
+    <div class="issue-card warning">
+      <div class="issue-level warning">需关注</div>
+      <div class="issue-title">袁小龙 OKR 权重分配待确认</div>
+      <div class="issue-desc">
+        袁小龙目前分配为O1(40%)+O2(30%)+O3(30%)=100%。其中合同审查（O1）为主攻方向，公平竞争审查（O2）和法律调解（O3）权重相同。<br>
+        考虑到公平竞争审查是政府市场（拓展难度大），法律调解有大成律所等合作基础（落地概率更高），建议评估是否调整O2/O3的权重比。
+      </div>
+    </div>
+  </div>`;
+
+  // 3. 权重合理性分析
+  html += `<div class="report-section">
+    <h3>三、权重合理性分析</h3>
+
+    <div class="issue-card good">
+      <div class="issue-level good">合理</div>
+      <div class="issue-title">全部9人Objective权重均为100%</div>
+      <div class="issue-desc">陈海彪(35%+25%+30%+10%=100%)、王亚洲(40%+40%+20%=100%)、袁小龙(40%+30%+30%=100%)、张帅(25%+25%+25%+15%+10%=100%)、周一新(30%+20%+30%+20%=100%)、陈斌(55%+30%+15%=100%)、陈凯(80%+20%=100%)、张坤(40%+30%+30%=100%)、袁伟(10%+40%+30%+20%=100%) — 全部人员OKR权重合计为100%，无缺漏。</div>
+    </div>
+
+    <div class="issue-card warning">
+      <div class="issue-level warning">需关注</div>
+      <div class="issue-title">陈斌 O1 权重55%，集中度过高</div>
+      <div class="issue-desc">陈斌的"上下文工程中枢/知识管线"占比55%，是所有人中单个O权重最高的。若该方向遇到技术瓶颈，将严重影响其整体OKR达成。建议评估是否可以将部分探索性KR拆分为独立Objective，降低集中风险。</div>
+    </div>
+
+    <div class="issue-card warning">
+      <div class="issue-level warning">需关注</div>
+      <div class="issue-title">陈凯 O1 权重80%，过度聚焦单一方向</div>
+      <div class="issue-desc">陈凯80%权重押注游戏AI方向，O2仅20%用于团队影响力建设。如果游戏AI业务方向调整或合作方需求变化，整体OKR达成风险极大。建议适当增加O2权重或补充其他方向探索。</div>
+    </div>
+
+    <div class="issue-card info">
+      <div class="issue-level info">建议</div>
+      <div class="issue-title">陈海彪O4"组织建设"仅10%权重，但承接人众多且有专人负责</div>
+      <div class="issue-desc">O4虽然权重最低，但被5个人承接（周一新、陈斌、陈凯、张坤、袁伟），说明组织建设是全员参与的战略。<strong>张坤作为业务BP以100%权重全面承接O4</strong>，覆盖人才梯队、AI青训营、战区协同等核心方向，确保了组织建设有专人全力推动。</div>
+    </div>
+  </div>`;
+
+  // 4. 内容缺失分析
+  html += `<div class="report-section">
+    <h3>四、内容缺失与对齐断裂分析</h3>
+
+    <div class="issue-card good">
+      <div class="issue-level good">已修复</div>
+      <div class="issue-title">法律商业化闭环已由袁小龙补齐</div>
+      <div class="issue-desc">
+        此前分析指出陈海彪O1中"商业化"方向（至少5个标杆客户落地）和O4中"商务闭环"（独立销售核心团队）缺少执行承接人。<br>
+        <strong>袁小龙的加入</strong>有效解决了这个问题：<br>
+        • O1-KR1"5个标杆客户落地" → 袁小龙负责法律方向3家签约 + 15家商机储备<br>
+        • O4-KR1"独立销售核心团队" → 袁小龙团队即为商业化独立作战力量<br>
+        • 袁小龙O1-KR3"标准化销售工具包+100%赋能培训"直接支撑销售团队建设
+      </div>
+    </div>
+
+    <div class="issue-card info">
+      <div class="issue-level info">部分承接</div>
+      <div class="issue-title">陈海彪O4-KR2「战区责任制」由张坤部分承接</div>
+      <div class="issue-desc">张坤O3-KR1承接了跨团队协同与端到端闭环部分：搭建「研发-商业化」跨团队标准化协同机制，制定需求拆解SOP、建立周度进度同步会议、推动协作效率提升40%。<br><br>
+        <strong>但以下组织架构层面的内容仍未覆盖：</strong><br>
+        • 战区经营指标的明确与分解<br>
+        • 各战区权责边界的划定<br>
+        • 决策链路缩短50%的目标<br>
+        这些内容仍需陈海彪亲自推动或指定专人负责。</div>
+    </div>
+
+    <div class="issue-card warning">
+      <div class="issue-level warning">注意</div>
+      <div class="issue-title">张帅O5"内部创新"(10%) 和袁伟O4"资源治理"(20%) 无上级对齐</div>
+      <div class="issue-desc">这两个Objective没有明确对齐到任何上级OKR。<br><br><strong>建议：</strong>张帅O5可对齐到陈海彪O4"AI Native组织"（内容高度相关）；袁伟O4可对齐到张帅O3"服务闭环"（资源治理是运维的一部分）。</div>
+    </div>
+
+    <div class="issue-card good">
+      <div class="issue-level good">一致</div>
+      <div class="issue-title">陈斌O1 记忆模块F值目标与中心级目标一致（均为75%）</div>
+      <div class="issue-desc">陈海彪O3-KR3和陈斌O1-KR1均要求"关键信息（用户、Agent）的F值达到75%以上"，目标对齐无偏差。</div>
+    </div>
+
+    <div class="issue-card info">
+      <div class="issue-level info">观察</div>
+      <div class="issue-title">周一新O3和陈斌O2中「AI助理」方向高度重叠</div>
+      <div class="issue-desc">两人同时承接类似方向，需确认是协同分工还是重复建设。<br><br><strong>建议：</strong>明确分工边界 — 例如周一新负责框架层和产品化，陈斌负责工程化落地和场景适配。</div>
+    </div>
+  </div>`;
+
+  // 5. KR完整性检查
+  html += `<div class="report-section">
+    <h3>五、KR 层级完整性检查</h3>
+
+    <div class="issue-card warning">
+      <div class="issue-level warning">注意</div>
+      <div class="issue-title">多个KR缺少明确的量化指标</div>
+      <div class="issue-desc">以下KR表述偏定性，缺少可衡量的定量标准：
+        <br>• 陈斌 O3-KR1："建立'特种兵'响应机制" — 缺少响应时间、覆盖项目数等指标
+        <br>• 陈斌 O3-KR2："保障分布式团队的研发规范与氛围" — 缺少具体衡量方式
+        <br>• 陈凯 O2-KR1："对外AI技术和业务交流" — 缺少交流次数、影响力指标
+        <br>• 陈凯 O1-KR2："大幅提升新玩法开发效率" — "大幅"未量化</div>
+    </div>
+
+    <div class="issue-card good">
+      <div class="issue-level good">良好实践</div>
+      <div class="issue-title">袁小龙、张坤 KR 量化标准清晰且可追踪</div>
+      <div class="issue-desc">袁小龙的9个KR全部设定了清晰的量化目标，值得推广：<br>
+        • 准确率>90%（合同审查）/ >95%（调解文书）<br>
+        • 15家商机池、3家签约、500份合同处理<br>
+        • 审查耗时降低50%、漏报误报率<10%<br>
+        • 效率提升30%（调解案件）<br><br>
+        张坤的8个KR同样具备清晰的量化标准：<br>
+        • 满意度≥95%、留存率≥95%<br>
+        • 业务满意度≥4.7/5、覆盖80%项目组<br>
+        • 效率提升30%/40%、延期率≤10%<br>
+        • 沟通成本降低35%<br><br>
+        结合张帅的SLA达标率≥95%、周一新的训练效率提升50%等，这些是团队KR的良好示范。</div>
+    </div>
+  </div>`;
+
+  // 6. 修订建议总结
+  html += `<div class="report-section">
+    <h3>六、修订建议汇总</h3>
+
+    <div class="issue-card good">
+      <div class="issue-level good">已解决</div>
+      <div class="issue-title">原P0问题"商务闭环无人承接"已由袁小龙补齐</div>
+      <div class="issue-desc">袁小龙作为商业化负责人加入后，法律审查领域从产品（王亚洲）到商业化（袁小龙）形成完整闭环。原先最严重的承接缺失问题已解决。</div>
+    </div>
+
+    <div class="issue-card good">
+      <div class="issue-level good">已对齐</div>
+      <div class="issue-title">5个标杆客户来源已清晰：袁小龙O1(3家)+O2(1家)+O3(1家)=5家</div>
+      <div class="issue-desc">袁小龙三个Objective分别覆盖合同审查(3家)、公平竞争审查(1家)、法律调解/大成律所(1家)，合计5家标杆客户，与陈海彪O1-KR1目标完全一致，无需额外补充来源。</div>
+    </div>
+
+    <div class="issue-card info">
+      <div class="issue-level info">优先级 P2 — 下次Review前完成</div>
+      <div class="issue-title">补全未对齐的Objective</div>
+      <div class="issue-desc">张帅O5"内部创新"建议对齐陈海彪O4；袁伟O4"资源治理"建议对齐张帅O3或陈海彪O2。（注：O4组织建设方向中跨团队协同部分已由张坤承接，但战区经营指标与权责边界等内容仍需补充承接人）</div>
+    </div>
+
+    <div class="issue-card warning">
+      <div class="issue-level warning">优先级 P1 — 本周修订</div>
+      <div class="issue-title">明确周一新与陈斌在「AI助理」方向的分工边界</div>
+      <div class="issue-desc">在KR描述中明确各自负责的层面（框架 vs 工程化）和预期交付物的差异。</div>
+    </div>
+
+    <div class="issue-card info">
+      <div class="issue-level info">优先级 P2 — 下次Review前完成</div>
+      <div class="issue-title">为缺少量化指标的KR补充衡量标准</div>
+      <div class="issue-desc">重点关注陈斌O3（3个KR均偏定性）和陈凯O2（2个KR偏定性），可参考袁小龙的KR量化标准作为示范。</div>
+    </div>
+
+    <div class="issue-card info">
+      <div class="issue-level info">优先级 P2 — 下次Review前完成</div>
+      <div class="issue-title">评估O2商业化方向单点依赖风险</div>
+      <div class="issue-desc">张帅一人承接O2的4个方向共18个KR，考虑将部分运维/交付内容更直接地分配给袁伟，建立更清晰的一级承接关系。</div>
+    </div>
+
+    <div class="issue-card info">
+      <div class="issue-level info">优先级 P2 — 下次Review前完成</div>
+      <div class="issue-title">确认张坤O3-KR2「Prompt模板库」是否应保留在业务BP的OKR中</div>
+      <div class="issue-desc">张坤O3-KR2"搭建AI产品中心Prompt模板库"偏向产品/技术方向的工作，与业务管理部BP的定位关联较弱。建议与张坤确认：该KR是作为BP推动组织能力建设的一部分，还是更适合由产品/技术团队（如周一新或陈斌）承接。</div>
+    </div>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+// ===================== GO TO DETAIL =====================
+function goToDetail(name) {
+  const btn = document.querySelectorAll('.tab')[1];
+  switchTab(btn, 'detail');
+  setTimeout(() => {
+    const el = document.getElementById('person-' + name);
+    if (el) {
+      const tabBar = document.querySelector('.tabs');
+      const offset = tabBar ? tabBar.offsetHeight + 16 : 60;
+      const top = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+      el.style.boxShadow = '0 0 0 3px #3498db';
+      setTimeout(() => { el.style.boxShadow = ''; }, 2000);
+    }
+  }, 100);
+}
+
+// ===================== TAB SWITCH =====================
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+// ===================== INIT =====================
+drawTree();
+renderMatrix();
+renderDetail();
+renderAlignment();
+renderReport();
+</script>
+</body>
+</html>
