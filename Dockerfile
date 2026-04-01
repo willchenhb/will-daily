@@ -44,6 +44,7 @@ RUN groupadd --system --gid 1001 nodejs && \
 # Copy standalone build
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 # Copy runtime deps for db init
 COPY --from=builder /app/prisma ./prisma
