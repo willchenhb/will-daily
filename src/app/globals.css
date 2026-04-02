@@ -56,3 +56,11 @@ body.login-page .main-content {
 body.login-page aside {
   display: none !important;
 }
+
+/* 全局输入框文字颜色加深 */
+input, select, textarea {
+  color: #1a1a2e;
+}
+input::placeholder, textarea::placeholder {
+  color: #9ca3af;
+}
