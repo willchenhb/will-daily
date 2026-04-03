@@ -217,7 +217,7 @@ export default function SidePanel({ project: initialProject, teamMembers, onClos
     <>
       <div className="fixed inset-0 z-30" onClick={onClose} />
 
-      <div className="fixed right-0 top-0 h-screen w-full md:w-[420px] bg-white border-l border-gray-100 shadow-xl z-40 flex flex-col overflow-hidden">
+      <div className="fixed right-0 top-0 h-screen w-full md:w-[480px] bg-white border-l border-gray-100 shadow-xl z-40 flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <h2 className="text-[15px] font-semibold text-gray-800">{proj.name}</h2>
@@ -237,22 +237,32 @@ export default function SidePanel({ project: initialProject, teamMembers, onClos
             <SelectField field="priority" label="优先级" value={proj.priority} options={PRIORITY_OPTIONS} />
             <InlineField field="startDate" label="开始日期" value={proj.startDate ? formatDate(proj.startDate) : ''} type="date" />
             <InlineField field="targetEndDate" label="截止日期" value={proj.targetEndDate ? formatDate(proj.targetEndDate) : ''} type="date" />
-            <div className="flex items-center gap-2 py-1.5">
-              <span className="text-[12px] text-gray-400 w-20 flex-shrink-0">OKR 目标</span>
-              <select
-                value={proj.okrObjectiveId ?? ''}
-                onChange={e => saveField('okrObjectiveId', e.target.value)}
-                className="flex-1 text-[13px] border-none outline-none bg-transparent text-gray-700 cursor-pointer hover:text-[#3a7a4f]"
-              >
-                <option value="">未关联</option>
-                {OKR_OPTIONS.map(g => (
-                  <optgroup key={g.group} label={g.group}>
-                    {g.items.map(o => (
-                      <option key={o.id} value={o.id}>{o.id}：{o.text}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+            <div className="flex flex-col gap-1 py-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] text-gray-400 w-20 flex-shrink-0">OKR 目标</span>
+                <select
+                  value={proj.okrObjectiveId ?? ''}
+                  onChange={e => saveField('okrObjectiveId', e.target.value)}
+                  className="flex-1 text-[13px] border-none outline-none bg-transparent text-gray-700 cursor-pointer hover:text-[#3a7a4f] min-w-0"
+                >
+                  <option value="">未关联</option>
+                  {OKR_OPTIONS.map(g => (
+                    <optgroup key={g.group} label={g.group}>
+                      {g.items.map(o => (
+                        <option key={o.id} value={o.id}>{o.id}：{o.text}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              {proj.okrObjectiveId && (() => {
+                const okr = OKR_OPTIONS.flatMap(g => g.items).find(o => o.id === proj.okrObjectiveId)
+                return okr ? (
+                  <p className="text-[12px] text-gray-500 pl-[88px] leading-relaxed break-words">
+                    {okr.id}：{okr.text}
+                  </p>
+                ) : null
+              })()}
             </div>
           </div>
 
