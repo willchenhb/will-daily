@@ -8,6 +8,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
@@ -190,7 +191,7 @@ function Column({
   projects: Project[]
   onSelectProject: (project: Project) => void
 }) {
-  const { setNodeRef } = useSortable({ id: status })
+  const { setNodeRef } = useDroppable({ id: status })
 
   return (
     <div
