@@ -62,9 +62,16 @@ export async function POST(request: NextRequest) {
       continue
     }
 
-    // Match owner by name
-    const ownerKey = row.owner ? row.owner.trim().toLowerCase() : ''
-    const ownerId = memberByName.get(ownerKey)
+    // Match owner by name, auto-create if not found
+    const ownerName = row.owner ? row.owner.trim() : ''
+    const ownerKey = ownerName.toLowerCase()
+    let ownerId = memberByName.get(ownerKey)
+
+    if (!ownerId && ownerName) {
+      const newMember = await prisma.teamMember.create({ data: { name: ownerName } })
+      ownerId = newMember.id
+      memberByName.set(ownerKey, ownerId)
+    }
 
     if (!ownerId) {
       skipped.push({ name: nameTrimmed, reason: `owner not found: ${row.owner ?? '(none)'}` })

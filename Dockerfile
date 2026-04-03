@@ -56,7 +56,7 @@ COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=builder /app/node_modules/bindings ./node_modules/bindings
 COPY --from=builder /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
 
-RUN mkdir -p data && chown nextjs:nodejs data
+RUN mkdir -p data .next/cache && chown -R nextjs:nodejs data .next/cache
 
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh

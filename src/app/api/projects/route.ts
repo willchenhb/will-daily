@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
       okrObjectiveId: p.okrObjectiveId,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
-      owner: p.owner,
+      owner: p.owner.name,
+      ownerId: p.ownerId,
       milestoneProgress: { completed: completedMilestones, total: totalMilestones },
       openRiskCount: openRisks,
       health,
@@ -97,12 +98,26 @@ export async function POST(request: NextRequest) {
   const body = await parseBody(request)
   if (!body) return badRequest('Invalid JSON body')
 
-  const { name, category, ownerId, description, priority, startDate, targetEndDate, okrObjectiveId } =
+  const { name, category, owner, ownerId, description, priority, startDate, targetEndDate, okrObjectiveId } =
     body as Record<string, unknown>
 
   if (!name || typeof name !== 'string') return badRequest('name is required')
   if (!category || typeof category !== 'string') return badRequest('category is required')
-  if (!ownerId || typeof ownerId !== 'number') return badRequest('ownerId is required (number)')
+
+  // Support both ownerId (number) and owner (name string)
+  let resolvedOwnerId: number
+  if (typeof ownerId === 'number') {
+    resolvedOwnerId = ownerId
+  } else if (typeof owner === 'string' && owner.trim()) {
+    const ownerName = owner.trim()
+    let member = await prisma.teamMember.findFirst({ where: { name: ownerName } })
+    if (!member) {
+      member = await prisma.teamMember.create({ data: { name: ownerName } })
+    }
+    resolvedOwnerId = member.id
+  } else {
+    return badRequest('owner (string) or ownerId (number) is required')
+  }
 
   const code = await generateProjectCode()
 
@@ -111,7 +126,7 @@ export async function POST(request: NextRequest) {
       name,
       code,
       category,
-      ownerId,
+      ownerId: resolvedOwnerId,
       description: typeof description === 'string' ? description : undefined,
       priority: typeof priority === 'string' ? priority : 'P1',
       startDate: typeof startDate === 'string' ? startDate : undefined,
@@ -123,5 +138,5 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  return NextResponse.json(project, { status: 201 })
+  return NextResponse.json({ ...project, owner: project.owner.name }, { status: 201 })
 }
