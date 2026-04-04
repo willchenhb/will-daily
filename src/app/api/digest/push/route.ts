@@ -57,8 +57,8 @@ function parseRawText(text: string, category: string): ParsedItem[] {
         // Source line: "📍 新华社/路透社 | 2026年4月3日"
         source = line
           .replace(/^📍\s*/, '')
-          .replace(/\s*\|\s*\d{4}年?\d{1,2}月?\d{1,2}.*$/, '')  // strip date
-          .replace(/\s*\|\s*\d{1,2}月\d{1,2}日.*$/, '')  // strip short date
+          .replace(/\s*\|\s*\d{4}[-年]\d{1,2}[-月]\d{1,2}.*$/, '')  // 2026-04-03 or 2026年4月3日
+          .replace(/\s*\|\s*\d{1,2}月\d{1,2}日.*$/, '')  // 4月3日
           .trim()
       } else {
         summaryLines.push(line)
