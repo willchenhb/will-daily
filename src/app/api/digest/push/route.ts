@@ -94,7 +94,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid or inactive token' }, { status: 401 })
   }
 
-  const body = await request.json()
+  let body
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json(
+      { error: 'Invalid JSON in request body. Check for unescaped quotes or special characters in text.' },
+      { status: 400 },
+    )
+  }
   const today = new Date().toISOString().slice(0, 10)
 
   let items: ParsedItem[]
