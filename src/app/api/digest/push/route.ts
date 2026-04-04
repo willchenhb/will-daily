@@ -13,46 +13,64 @@ interface ParsedItem {
   date?: string
 }
 
-// Parse raw text like:
-// 1. 🤖 谷歌发布 Gemma 4 开源大模型系列
-// 📍 Google Blog / 36氪 | 4月3日
-// 谷歌正式推出 Gemma 4 系列...
+// Parse raw text into digest items. Supports two formats:
+// Format A (numbered): "1. 🤖 Title\n📍 Source | Date\nSummary\n2. ..."
+// Format B (emoji-prefixed): "🇨🇳 Title\n📍 Source | Date\nSummary\n🌍 Title\n..."
+// Also handles section headers like 【国内要闻】【国际要闻】
 function parseRawText(text: string, category: string): ParsedItem[] {
-  const items: ParsedItem[] = []
-  // Split by numbered items: "1. " "2. " etc
-  const blocks = text.split(/\n\s*\d+\.\s+/).filter(b => b.trim())
+  // Strip section headers and footer lines
+  const cleaned = text
+    .replace(/^【[^】]+】\s*$/gm, '')  // 【国内要闻】etc
+    .replace(/^[🔥⚡].{0,4}(播报|完毕).*$/gm, '')  // 🔥 火仔播报完毕...
+    .trim()
 
+  // Detect format: numbered vs emoji-prefixed
+  const hasNumbered = /^\s*\d+[\.\)、]\s+/m.test(cleaned)
+
+  let blocks: string[]
+  if (hasNumbered) {
+    // Split by "1. " "2. " etc
+    blocks = cleaned.split(/\n\s*(?=\d+[\.\)、]\s+)/).filter(b => b.trim())
+  } else {
+    // Split by lines starting with emoji (flag/icon) — each item starts with an emoji
+    blocks = cleaned.split(/\n(?=[^\s\w\u4e00-\u9fff📍])/).filter(b => b.trim())
+  }
+
+  const items: ParsedItem[] = []
   for (const block of blocks) {
     const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
     if (lines.length === 0) continue
 
-    // First line: strip leading number/emoji/punctuation
+    // First line: strip numbering and leading emoji to get title
     const title = lines[0]
-      .replace(/^\d+[\.\)、]\s*/, '')  // strip "1. " "2) " etc
-      .replace(/^[^\w\u4e00-\u9fff]+\s*/, '')  // strip leading non-word/non-CJK (emoji etc)
+      .replace(/^\d+[\.\)、]\s*/, '')  // strip "1. "
+      .replace(/^[^\w\u4e00-\u9fff]+\s*/, '')  // strip leading emoji
       .trim()
-    if (!title) continue
+    if (!title || title.length < 4) continue  // skip noise
 
     let source: string | undefined
-    let summary: string | undefined
     const summaryLines: string[] = []
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i]
-      // Source line: 📍 xxx | date
       if (line.startsWith('📍')) {
-        source = line.replace(/^📍\s*/, '').replace(/\s*\|\s*\d+.*$/, '').trim()
-      } else if (!line.startsWith('🔥') && !line.startsWith('---')) {
-        // Summary lines (skip footer lines like 🔥 火仔播报)
+        // Source line: "📍 新华社/路透社 | 2026年4月3日"
+        source = line
+          .replace(/^📍\s*/, '')
+          .replace(/\s*\|\s*\d{4}年?\d{1,2}月?\d{1,2}.*$/, '')  // strip date
+          .replace(/\s*\|\s*\d{1,2}月\d{1,2}日.*$/, '')  // strip short date
+          .trim()
+      } else {
         summaryLines.push(line)
       }
     }
 
-    if (summaryLines.length > 0) {
-      summary = summaryLines.join(' ')
-    }
-
-    items.push({ category, title, summary, source })
+    items.push({
+      category,
+      title,
+      summary: summaryLines.length > 0 ? summaryLines.join(' ') : undefined,
+      source: source || undefined,
+    })
   }
 
   return items
