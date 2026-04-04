@@ -95,6 +95,11 @@ const tables = [
     updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE,
     FOREIGN KEY (ownerId) REFERENCES TeamMember(id))\`,
+  \`CREATE TABLE IF NOT EXISTS DailyDigest (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL,
+    category TEXT NOT NULL, title TEXT NOT NULL,
+    summary TEXT, url TEXT, source TEXT,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)\`,
   \`CREATE TABLE IF NOT EXISTS Session (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     token TEXT NOT NULL UNIQUE,
@@ -124,6 +129,8 @@ const indexes = [
   'CREATE INDEX IF NOT EXISTS idx_content_node_type ON ContentNode(sourceType)',
   'CREATE INDEX IF NOT EXISTS idx_edge_a ON ContentEdge(nodeAId)',
   'CREATE INDEX IF NOT EXISTS idx_edge_b ON ContentEdge(nodeBId)',
+  'CREATE INDEX IF NOT EXISTS idx_digest_date ON DailyDigest(date)',
+  'CREATE INDEX IF NOT EXISTS idx_digest_category ON DailyDigest(category)',
   'CREATE INDEX IF NOT EXISTS idx_session_token ON Session(token)',
   'CREATE INDEX IF NOT EXISTS idx_project_owner ON Project(ownerId)',
   'CREATE INDEX IF NOT EXISTS idx_project_status ON Project(status)',

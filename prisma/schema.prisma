@@ -169,6 +169,20 @@ model ProjectRisk {
   @@index([ownerId])
 }
 
+model DailyDigest {
+  id        Int      @id @default(autoincrement())
+  date      String   // YYYY-MM-DD
+  category  String   // 时政新闻|AI新闻|产品热点
+  title     String
+  summary   String?
+  url       String?
+  source    String?  // e.g. "openclaw"
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@index([category])
+}
+
 model ContentNode {
   id         Int      @id @default(autoincrement())
   sourceType String   // 'diary' | 'weekly' | 'note' | 'article'
