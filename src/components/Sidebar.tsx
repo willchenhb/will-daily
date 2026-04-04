@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import DigestWidget from './DigestWidget'
 
 const navItems = [
+  { href: '/digest', icon: '📰', label: '导读' },
   { href: '/diary', icon: '📓', label: '日记' },
   { href: '/weekly', icon: '📋', label: '周记' },
   { href: '/notes', icon: '📝', label: '笔记' },
@@ -132,8 +132,6 @@ export default function Sidebar() {
             <span className="text-[17px] font-semibold text-gray-800">Will Daily</span>
           </div>
 
-          <DigestWidget collapsed={false} />
-
           <nav className="flex-1 flex flex-col gap-1 px-2">
             {navItems.map(item => {
               const active = pathname.startsWith(item.href)
@@ -217,8 +215,6 @@ export default function Sidebar() {
           <span className="text-[17px] font-semibold text-gray-800">Will Daily</span>
         )}
       </div>
-
-      <DigestWidget collapsed={collapsed} />
 
       <nav className="flex-1 flex flex-col gap-1 px-2">
         {navItems.map(item => {
