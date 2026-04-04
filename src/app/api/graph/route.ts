@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   const [nodes, edges] = await Promise.all([
     prisma.contentNode.findMany({
-      select: { id: true, sourceType: true, sourceId: true, title: true, snippet: true },
+      select: { id: true, sourceType: true, sourceId: true, title: true, snippet: true, embedding: true },
     }),
     prisma.contentEdge.findMany({
       select: { nodeAId: true, nodeBId: true, weight: true },
