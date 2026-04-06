@@ -99,6 +99,8 @@ export async function POST(request: NextRequest) {
     //body = await request.json()
     const raw = await request.text()  // 改成先读 text
     console.log('RAW BODY:', JSON.stringify(raw))  // 打印原始内容
+    console.log('X-Real-IP:', request.headers.get('x-real-ip'))
+    console.log('X-Forwarded-For:', request.headers.get('x-forwarded-for'))
     body = JSON.parse(raw)
   } catch {
     return NextResponse.json(
