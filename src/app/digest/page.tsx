@@ -65,7 +65,7 @@ export default function DigestPage() {
   const hasData = totalCount > 0
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -89,7 +89,7 @@ export default function DigestPage() {
           <p className="text-gray-300 text-xs mt-2">通过 API 推送新闻到 /api/digest/push</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {CATEGORY_ORDER.filter(cat => grouped[cat]?.length).map(category => (
             <section key={category}>
               <div className="flex items-center gap-2 mb-3">
@@ -99,19 +99,19 @@ export default function DigestPage() {
               </div>
               <div className="space-y-2">
                 {grouped[category].map(item => (
-                  <div key={item.id} className="group border border-gray-100 rounded-xl p-4 hover:border-gray-200 hover:shadow-sm transition-all">
-                    <div className="flex items-start justify-between gap-3">
+                  <div key={item.id} className="group border border-gray-100 rounded-xl p-3.5 hover:border-gray-200 hover:shadow-sm transition-all">
+                    <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         {item.url ? (
                           <a href={item.url} target="_blank" rel="noopener noreferrer"
-                            className="text-[14px] font-medium text-gray-800 hover:text-blue-600 transition-colors leading-snug">
+                            className="text-[13px] font-medium text-gray-800 hover:text-blue-600 transition-colors leading-snug">
                             {item.title}
                           </a>
                         ) : (
-                          <p className="text-[14px] font-medium text-gray-800 leading-snug">{item.title}</p>
+                          <p className="text-[13px] font-medium text-gray-800 leading-snug">{item.title}</p>
                         )}
                         {item.summary && (
-                          <p className="text-[12px] text-gray-500 mt-1.5 leading-relaxed">{item.summary}</p>
+                          <p className="text-[12px] text-gray-500 mt-1 leading-relaxed line-clamp-2">{item.summary}</p>
                         )}
                       </div>
                       {item.url && (
@@ -122,7 +122,7 @@ export default function DigestPage() {
                       )}
                     </div>
                     {item.source && (
-                      <div className="mt-2">
+                      <div className="mt-1.5">
                         <span className="text-[10px] text-gray-300 bg-gray-50 px-1.5 py-0.5 rounded">{item.source}</span>
                       </div>
                     )}
@@ -138,14 +138,14 @@ export default function DigestPage() {
               <h2 className="text-[15px] font-semibold text-gray-700 mb-3">{category}</h2>
               <div className="space-y-2">
                 {grouped[category].map(item => (
-                  <div key={item.id} className="border border-gray-100 rounded-xl p-4">
+                  <div key={item.id} className="border border-gray-100 rounded-xl p-3.5">
                     {item.url ? (
                       <a href={item.url} target="_blank" rel="noopener noreferrer"
-                        className="text-[14px] font-medium text-gray-800 hover:text-blue-600">{item.title}</a>
+                        className="text-[13px] font-medium text-gray-800 hover:text-blue-600">{item.title}</a>
                     ) : (
-                      <p className="text-[14px] font-medium text-gray-800">{item.title}</p>
+                      <p className="text-[13px] font-medium text-gray-800">{item.title}</p>
                     )}
-                    {item.summary && <p className="text-[12px] text-gray-500 mt-1.5">{item.summary}</p>}
+                    {item.summary && <p className="text-[12px] text-gray-500 mt-1">{item.summary}</p>}
                   </div>
                 ))}
               </div>

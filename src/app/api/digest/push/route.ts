@@ -96,7 +96,10 @@ export async function POST(request: NextRequest) {
 
   let body
   try {
-    body = await request.json()
+    //body = await request.json()
+    const raw = await request.text()  // 改成先读 text
+    console.log('RAW BODY:', JSON.stringify(raw))  // 打印原始内容
+    body = JSON.parse(raw)
   } catch {
     return NextResponse.json(
       { error: 'Invalid JSON in request body. Check for unescaped quotes or special characters in text.' },
