@@ -15,24 +15,16 @@ interface Entry {
 
 export default function DiaryPage() {
   const [entries, setEntries] = useState<Entry[]>([])
-  const [chatSummaries, setChatSummaries] = useState<Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const today = getToday()
-  const todayExists = entries.some(e => e.date === today)
+  const todayDiaryExists = entries.some(e => e.date === today && (!e.type || e.type === 'diary'))
 
   const fetchEntries = useCallback(async () => {
-    const [diaryRes, chatRes] = await Promise.all([
-      fetch('/api/diary?type=diary'),
-      fetch('/api/diary?type=chat_summary'),
-    ])
-    if (diaryRes.ok) {
-      const data = await diaryRes.json()
+    const res = await fetch('/api/diary')
+    if (res.ok) {
+      const data = await res.json()
       setEntries(data.entries)
-    }
-    if (chatRes.ok) {
-      const data = await chatRes.json()
-      setChatSummaries(data.entries)
     }
     setLoading(false)
   }, [])
@@ -80,7 +72,7 @@ export default function DiaryPage() {
 
       <h1 className="text-lg font-semibold text-gray-800 mb-4">日记</h1>
 
-      {!todayExists && (
+      {!todayDiaryExists && (
         <>
           <DiaryEntry
             date={today}
@@ -95,30 +87,12 @@ export default function DiaryPage() {
 
       {entries.map(entry => (
         <div key={entry.id}>
-          <DiaryEntry
-            id={entry.id}
-            date={entry.date}
-            dateFormatted={formatDate(entry.date)}
-            content={entry.content}
-            isToday={entry.date === today}
-            onSave={handleSave}
-            onDelete={handleDelete}
-          />
-          <div className="border-t border-gray-100 mb-6" />
-        </div>
-      ))}
-
-      {/* Chat Summaries */}
-      {chatSummaries.length > 0 && (
-        <>
-          <div className="border-t-2 border-gray-200 my-8" />
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="text-base">💬</span> 群聊总结
-          </h2>
-          {chatSummaries.map(entry => (
-            <div key={entry.id} className="mb-6">
+          {entry.type === 'chat_summary' ? (
+            <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] text-gray-400 tracking-wide">{formatDate(entry.date)}</span>
+                <span className="text-[11px] text-gray-400 tracking-wide">
+                  💬 群聊总结 · {formatDate(entry.date)}
+                </span>
                 {entry.date === today && (
                   <span className="text-[10px] text-white bg-blue-500 px-2 py-0.5 rounded">今天</span>
                 )}
@@ -128,9 +102,20 @@ export default function DiaryPage() {
                 dangerouslySetInnerHTML={{ __html: entry.content }}
               />
             </div>
-          ))}
-        </>
-      )}
+          ) : (
+            <DiaryEntry
+              id={entry.id}
+              date={entry.date}
+              dateFormatted={formatDate(entry.date)}
+              content={entry.content}
+              isToday={entry.date === today}
+              onSave={handleSave}
+              onDelete={handleDelete}
+            />
+          )}
+          <div className="border-t border-gray-100 mb-6" />
+        </div>
+      ))}
     </div>
   )
 }
