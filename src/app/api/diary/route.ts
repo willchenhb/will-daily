@@ -10,7 +10,13 @@ export async function GET(request: NextRequest) {
   const from = searchParams.get('from')
   const to = searchParams.get('to')
 
+  const type = searchParams.get('type') // diary | chat_summary | null (all)
   const where: Record<string, unknown> = {}
+  if (type) {
+    where.type = type
+  } else {
+    where.type = 'diary' // default: only show regular diary
+  }
   if (from || to) {
     where.date = {}
     if (from) (where.date as Record<string, string>).gte = from

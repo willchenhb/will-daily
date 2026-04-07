@@ -9,21 +9,31 @@ import { getToday, formatDate } from '@/lib/dates'
 interface Entry {
   id: number
   date: string
+  type?: string
   content: string
 }
 
 export default function DiaryPage() {
   const [entries, setEntries] = useState<Entry[]>([])
+  const [chatSummaries, setChatSummaries] = useState<Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const today = getToday()
   const todayExists = entries.some(e => e.date === today)
 
   const fetchEntries = useCallback(async () => {
-    const res = await fetch('/api/diary')
-    if (!res.ok) { setLoading(false); return }
-    const data = await res.json()
-    setEntries(data.entries)
+    const [diaryRes, chatRes] = await Promise.all([
+      fetch('/api/diary?type=diary'),
+      fetch('/api/diary?type=chat_summary'),
+    ])
+    if (diaryRes.ok) {
+      const data = await diaryRes.json()
+      setEntries(data.entries)
+    }
+    if (chatRes.ok) {
+      const data = await chatRes.json()
+      setChatSummaries(data.entries)
+    }
     setLoading(false)
   }, [])
 
@@ -97,6 +107,30 @@ export default function DiaryPage() {
           <div className="border-t border-gray-100 mb-6" />
         </div>
       ))}
+
+      {/* Chat Summaries */}
+      {chatSummaries.length > 0 && (
+        <>
+          <div className="border-t-2 border-gray-200 my-8" />
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <span className="text-base">💬</span> 群聊总结
+          </h2>
+          {chatSummaries.map(entry => (
+            <div key={entry.id} className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] text-gray-400 tracking-wide">{formatDate(entry.date)}</span>
+                {entry.date === today && (
+                  <span className="text-[10px] text-white bg-blue-500 px-2 py-0.5 rounded">今天</span>
+                )}
+              </div>
+              <div
+                className="font-content text-[14px] text-gray-600 leading-relaxed bg-gray-50 rounded-xl p-4 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: entry.content }}
+              />
+            </div>
+          ))}
+        </>
+      )}
     </div>
   )
 }

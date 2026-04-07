@@ -14,9 +14,11 @@ db.pragma('busy_timeout = 5000');
 // Create all tables
 const tables = [
   \`CREATE TABLE IF NOT EXISTS DiaryEntry (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL UNIQUE,
-    content TEXT NOT NULL, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)\`,
+    id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'diary', content TEXT NOT NULL,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(date, type))\`,
   \`CREATE TABLE IF NOT EXISTS WeeklyPlan (
     id INTEGER PRIMARY KEY AUTOINCREMENT, weekStart TEXT NOT NULL UNIQUE,
     title TEXT, content TEXT, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -110,6 +112,17 @@ const tables = [
 ];
 
 for (const sql of tables) db.exec(sql);
+
+// Add type column to DiaryEntry if missing
+try {
+  db.prepare('SELECT type FROM DiaryEntry LIMIT 1').get();
+} catch(e) {
+  db.exec('ALTER TABLE DiaryEntry ADD COLUMN type TEXT NOT NULL DEFAULT \\'diary\\'');
+  // Recreate unique index: drop old date-only unique, add date+type unique
+  try { db.exec('DROP INDEX IF EXISTS sqlite_autoindex_DiaryEntry_1'); } catch(e2) {}
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_diary_date_type ON DiaryEntry(date, type)');
+  console.log('Added type column to DiaryEntry');
+}
 
 // Add milestoneId column to TodoItem if missing
 try {
