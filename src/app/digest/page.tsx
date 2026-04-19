@@ -13,16 +13,18 @@ interface DigestItem {
   createdAt: string
 }
 
-const CATEGORY_ORDER = ['时政新闻', 'AI新闻', '产品热点']
+const CATEGORY_ORDER = ['时政新闻', 'AI新闻', '产品热点', '体育新闻']
 const CATEGORY_ICONS: Record<string, string> = {
   '时政新闻': '🏛️',
   'AI新闻': '🤖',
   '产品热点': '🔥',
+  '体育新闻': '⚽',
 }
 const CATEGORY_COLORS: Record<string, string> = {
   '时政新闻': '#dc2626',
   'AI新闻': '#2563eb',
   '产品热点': '#ea580c',
+  '体育新闻': '#16a34a',
 }
 
 function getToday() {

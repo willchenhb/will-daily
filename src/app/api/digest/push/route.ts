@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-const VALID_CATEGORIES = ['时政新闻', 'AI新闻', '产品热点']
+const VALID_CATEGORIES = ['时政新闻', 'AI新闻', '产品热点', '体育新闻']
 
 interface ParsedItem {
   category: string

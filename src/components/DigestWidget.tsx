@@ -14,9 +14,10 @@ const CATEGORY_ICONS: Record<string, string> = {
   '时政新闻': '🏛️',
   'AI新闻': '🤖',
   '产品热点': '🔥',
+  '体育新闻': '⚽',
 }
 
-const CATEGORY_ORDER = ['时政新闻', 'AI新闻', '产品热点']
+const CATEGORY_ORDER = ['时政新闻', 'AI新闻', '产品热点', '体育新闻']
 
 export default function DigestWidget({ collapsed }: { collapsed: boolean }) {
   const [grouped, setGrouped] = useState<Record<string, DigestItem[]>>({})
