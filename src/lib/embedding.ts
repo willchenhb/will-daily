@@ -13,9 +13,11 @@ async function getAISettings() {
   })
   const map: Record<string, string> = {}
   for (const s of settings) map[s.key] = s.value
+  let model = map.ai_model || 'kimi-k3'
+  if (model === 'kimi-k2.5') model = 'kimi-k3'
   return {
     apiKey: process.env.KIMI_API_KEY || '',
-    model: map.ai_model || 'kimi-k2.5',
+    model,
   }
 }
 

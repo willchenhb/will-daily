@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import Toast from '@/components/Toast'
 
 const MODELS = [
-  { value: 'kimi-k2.5', label: 'kimi-k2.5 (最新)' },
+  { value: 'kimi-k3', label: 'kimi-k3 (旗舰 · 1M 上下文)' },
+  { value: 'kimi-k2.6', label: 'kimi-k2.6 (多模态)' },
+  { value: 'kimi-k2.7-code', label: 'kimi-k2.7-code (编程)' },
   { value: 'moonshot-v1-auto', label: 'moonshot-v1-auto (自动)' },
   { value: 'moonshot-v1-8k', label: 'moonshot-v1-8k (快速)' },
   { value: 'moonshot-v1-32k', label: 'moonshot-v1-32k' },
@@ -13,7 +15,7 @@ const MODELS = [
 
 export default function SettingsPage() {
   const [apiKeySet, setApiKeySet] = useState(false)
-  const [model, setModel] = useState('kimi-k2.5')
+  const [model, setModel] = useState('kimi-k3')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
@@ -21,7 +23,7 @@ export default function SettingsPage() {
     const res = await fetch('/api/settings')
     const data = await res.json()
     setApiKeySet(data.ai_api_key_set === 'true')
-    setModel(data.ai_model || 'kimi-k2.5')
+    setModel(data.ai_model || 'kimi-k3')
   }, [])
 
   useEffect(() => { fetchSettings() }, [fetchSettings])

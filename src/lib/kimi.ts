@@ -7,9 +7,11 @@ async function getAISettings() {
   })
   const map: Record<string, string> = {}
   for (const s of settings) map[s.key] = s.value
+  let model = map.ai_model || 'kimi-k3'
+  if (model === 'kimi-k2.5') model = 'kimi-k3'
   return {
     apiKey: process.env.KIMI_API_KEY || '',
-    model: map.ai_model || 'kimi-k2.5',
+    model,
   }
 }
 
@@ -23,8 +25,8 @@ function createClient(apiKey: string) {
 }
 
 function buildParams(model: string) {
-  const isK2 = model.startsWith('kimi-k2')
-  return isK2 ? {} : { temperature: 0.3 }
+  const isKimiK = model.startsWith('kimi-k')
+  return isKimiK ? {} : { temperature: 0.3 }
 }
 
 export async function generateSummary(content: string): Promise<string> {
