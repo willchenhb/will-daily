@@ -32,7 +32,12 @@ export default function MaterialDetailPage() {
   const router = useRouter()
   const [material, setMaterial] = useState<Material | null>(null)
   const [frameLoaded, setFrameLoaded] = useState(false)
+  // Mount the iframe client-side only: if it were server-rendered it could finish
+  // loading before hydration attaches onLoad, leaving the spinner up forever.
+  const [mounted, setMounted] = useState(false)
   const frameWrapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     fetch(`/api/materials/${id}`)
@@ -53,7 +58,7 @@ export default function MaterialDetailPage() {
   const rawUrl = `/api/materials/${id}/raw`
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)] md:h-screen">
+    <div className="viewport-page flex-1 min-h-0 flex flex-col">
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 md:px-6 py-2.5 border-b border-gray-100 shrink-0">
         <Link href="/materials" className="text-[13px] text-gray-400 hover:text-gray-600 shrink-0">
@@ -89,14 +94,16 @@ export default function MaterialDetailPage() {
             <span className="inline-block w-5 h-5 border-2 border-[#3a7a4f] border-t-transparent rounded-full animate-spin" />
           </div>
         )}
-        <iframe
-          src={rawUrl}
-          title={material?.title || '资料预览'}
-          sandbox={MATERIAL_SANDBOX}
-          allowFullScreen
-          onLoad={() => setFrameLoaded(true)}
-          className="w-full h-full border-0 bg-white"
-        />
+        {mounted && (
+          <iframe
+            src={rawUrl}
+            title={material?.title || '资料预览'}
+            sandbox={MATERIAL_SANDBOX}
+            allowFullScreen
+            onLoad={() => setFrameLoaded(true)}
+            className="w-full h-full border-0 bg-white"
+          />
+        )}
       </div>
     </div>
   )

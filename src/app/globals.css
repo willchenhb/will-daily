@@ -47,6 +47,19 @@ body.sidebar-collapsed .main-content {
   }
 }
 
+/* Full-viewport pages (e.g. 资料预览): page + ICP footer fit exactly one screen */
+main:has(.viewport-page) {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+}
+
+main:has(.viewport-page) > div:first-child {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 /* Login page: hide sidebar, remove margin */
 body.login-page .main-content {
   margin-left: 0 !important;

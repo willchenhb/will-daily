@@ -261,13 +261,25 @@ export default function MaterialsPage() {
               placeholder="搜索标题、文件名或备注..."
               className="flex-1 text-[13px] border border-gray-200 rounded-lg px-4 py-2 outline-none focus:border-[#3a7a4f] bg-white"
             />
-            <select
-              value={sort}
-              onChange={e => setSort(e.target.value as SortKey)}
-              className="text-[13px] border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-[#3a7a4f] bg-white"
-            >
-              {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-            </select>
+            <div className="relative shrink-0">
+              <select
+                value={sort}
+                onChange={e => setSort(e.target.value as SortKey)}
+                className="appearance-none h-full text-[13px] text-gray-600 border border-gray-200 rounded-lg pl-3 pr-8 py-2 outline-none focus:border-[#3a7a4f] hover:border-gray-300 bg-white cursor-pointer transition-colors"
+              >
+                {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+              </select>
+              <svg
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
+                <path d="M6 8l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
           </div>
 
           {visible.length === 0 ? (
