@@ -19,6 +19,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 ENV PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
+# better-sqlite3 fetches its prebuilt binary from GitHub by default (very slow from
+# Aliyun), and falls back to node-gyp which downloads headers from nodejs.org.
+ENV npm_config_better_sqlite3_binary_host=https://registry.npmmirror.com/-/binary/better-sqlite3 \
+    npm_config_disturl=https://registry.npmmirror.com/-/binary/node
 RUN npm ci
 
 # Build the application
