@@ -10,6 +10,7 @@ const navItems = [
   { href: '/weekly', icon: '📋', label: '周记' },
   { href: '/notes', icon: '📝', label: '笔记' },
   { href: '/curated', icon: '⭐', label: '精选' },
+  { href: '/materials', icon: '📁', label: '资料' },
   { href: '/graph', icon: '🕸️', label: '图谱' },
   { href: '/okr', icon: '🎯', label: 'OKR' },
   { href: '/projects', icon: '📊', label: '项目' },

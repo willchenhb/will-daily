@@ -215,3 +215,16 @@ model ContentEdge {
   @@index([nodeAId])
   @@index([nodeBId])
 }
+
+model Material {
+  id          Int      @id @default(autoincrement())
+  title       String
+  filename    String
+  content     String   // raw HTML, stored as UTF-8
+  size        Int      // original file size in bytes
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
+}

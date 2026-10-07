@@ -108,7 +108,13 @@ const tables = [
     userId INTEGER NOT NULL,
     expiresAt INTEGER NOT NULL,
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (userId) REFERENCES User(id) ON DELETE CASCADE)\`
+    FOREIGN KEY (userId) REFERENCES User(id) ON DELETE CASCADE)\`,
+  \`CREATE TABLE IF NOT EXISTS Material (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL,
+    filename TEXT NOT NULL, content TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0, description TEXT,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)\`
 ];
 
 for (const sql of tables) db.exec(sql);
@@ -152,6 +158,7 @@ const indexes = [
   'CREATE INDEX IF NOT EXISTS idx_risk_project ON ProjectRisk(projectId)',
   'CREATE INDEX IF NOT EXISTS idx_risk_owner ON ProjectRisk(ownerId)',
   'CREATE INDEX IF NOT EXISTS idx_todo_milestone ON TodoItem(milestoneId)',
+  'CREATE INDEX IF NOT EXISTS idx_material_created ON Material(createdAt)',
 ];
 for (const sql of indexes) db.exec(sql);
 
