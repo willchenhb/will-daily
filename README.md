@@ -15,13 +15,13 @@
 - **笔记** — 分类归档 + AI 摘要
 - **精选文章** — HTML 抓取 + 关键点提取
 - **今日导读** — 时政 / AI / 产品热点 / 体育新闻四类，支持 API 推送 + 原始文本智能解析
-- **项目管理** — 看板 + 里程碑 + 风险 + OKR 关联
+- **资料** — 上传 HTML 在线渲染（沙箱隔离）+ 列表管理
 - **知识图谱** — 基于关键词聚类 + Kimi embedding 向量化
 - **用户认证** — bcrypt + Session + API Token 双通道
 
 ### Agent 驱动的具体成果
 
-1. **完整产品交付**：从空仓库到生产可用，前端组件（Tiptap 富文本、dnd-kit 拖拽、sigma.js 图谱）、后端 API（30+ REST 端点）、数据库 Schema（13 张表）全部由 agent 生成并迭代修复。
+1. **完整产品交付**：从空仓库到生产可用，前端组件（Tiptap 富文本与图片粘贴、沙箱 iframe 渲染、sigma.js 图谱）、后端 API（30+ REST 端点）、数据库 Schema（13 张表）全部由 agent 生成并迭代修复。
 2. **生产级部署链路**：agent 编写一键部署脚本 `deploy.sh`（自动化 Docker + Nginx + Certbot），并在手动上传阿里云 SSL 证书后，agent 主动识别冲突并重写 `setup-ssl.sh` 切换到本地证书路径。
 3. **AI 能力集成**：接入 Kimi（Moonshot）API 实现笔记摘要、文章关键点提取、内容向量嵌入，构建出可视化知识图谱。
 4. **真实问题修复**：上线后遇到的字段冲突、Docker 缓存权限、看板拖拽事件错乱、JSON 解析容错、国内访问 next/font 阻塞等问题，均由 agent 通过代码定位与最小化修改解决（commit 历史中 `fix:` 类提交清晰可见）。
@@ -96,7 +96,7 @@ docker compose up -d --build    # 更新部署
 | 框架 | Next.js 14 (App Router) |
 | 语言 | TypeScript |
 | ORM | Prisma 7 + better-sqlite3 |
-| UI | Tailwind CSS + Tiptap + dnd-kit |
+| UI | Tailwind CSS + Tiptap |
 | 图谱 | sigma.js + graphology |
 | AI | Kimi (Moonshot) — embedding + chat |
 | 部署 | Docker + Nginx + Alibaba Cloud ECS |
