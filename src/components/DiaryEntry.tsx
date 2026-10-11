@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Editor from './Editor'
+import { blockSaveForPendingImages } from '@/lib/editor-images'
 
 interface DiaryEntryProps {
   id?: number
@@ -20,6 +21,7 @@ export default function DiaryEntry({ id, date, dateFormatted, content: initialCo
 
   const handleSave = async () => {
     if (!content || content === '<p></p>') return
+    if (blockSaveForPendingImages(content)) return
     setSaving(true)
     await onSave({ id, date, content })
     setSaving(false)

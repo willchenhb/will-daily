@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import TodoItem from './TodoItem'
 import Editor from './Editor'
+import { blockSaveForPendingImages } from '@/lib/editor-images'
 
 interface Todo {
   id: number
@@ -41,6 +42,7 @@ export default function WeeklyPlan({
   const [saving, setSaving] = useState(false)
 
   const handleSaveContent = async () => {
+    if (blockSaveForPendingImages(content)) return
     setSaving(true)
     await onSave({ id, weekStart, content })
     setSaving(false)

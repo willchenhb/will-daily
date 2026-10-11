@@ -228,3 +228,13 @@ model Material {
 
   @@index([createdAt])
 }
+
+// Images pasted into the diary / weekly / notes editors
+model Upload {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique // random UUID used in the public URL
+  mime      String
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now())
+}

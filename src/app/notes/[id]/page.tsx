@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import NovelEditor from '@/components/NovelEditor'
+import { blockSaveForPendingImages } from '@/lib/editor-images'
 import Toast from '@/components/Toast'
 import Markdown from '@/components/Markdown'
 
@@ -101,6 +102,7 @@ export default function NoteDetailPage() {
   }, [isDirty])
 
   const handleSave = async () => {
+    if (blockSaveForPendingImages(content)) return
     setSaving(true)
     try {
       await fetch(`/api/notes/${id}`, {

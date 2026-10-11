@@ -3,7 +3,9 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import ImageExtension from '@tiptap/extension-image'
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { handleImageDrop, handleImagePaste, insertImages, pickImageFiles } from '@/lib/editor-images'
 
 interface EditorProps {
   content: string
@@ -22,6 +24,7 @@ const SLASH_COMMANDS = [
   { label: '引用', icon: '❝', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().toggleBlockquote().run() },
   { label: '代码块', icon: '<>', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().toggleCodeBlock().run() },
   { label: '分割线', icon: '—', action: (e: NonNullable<ReturnType<typeof useEditor>>) => e.chain().focus().setHorizontalRule().run() },
+  { label: '图片', icon: '🖼', action: (e: NonNullable<ReturnType<typeof useEditor>>) => { pickImageFiles().then(files => insertImages(e.view, files)) } },
 ]
 
 export default function Editor({ content, onChange, placeholder = '输入 / 插入内容...', editable = true, onSave }: EditorProps) {
@@ -44,6 +47,7 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder }),
+      ImageExtension,
     ],
     content,
     editable,
@@ -73,7 +77,8 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
     },
     onSelectionUpdate: ({ editor }) => {
       const { from, to } = editor.state.selection
-      if (from === to || !editable) {
+      // Text formatting doesn't apply to a selected image
+      if (from === to || !editable || editor.isActive('image')) {
         setShowBubble(false)
         return
       }
@@ -93,6 +98,8 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
       attributes: {
         class: 'font-content prose prose-sm max-w-none focus:outline-none min-h-[60px] text-gray-700 leading-relaxed',
       },
+      handlePaste: (view, event) => handleImagePaste(view, event),
+      handleDrop: (view, event, _slice, moved) => handleImageDrop(view, event, moved),
       handleKeyDown: (_view, event) => {
         // Cmd/Ctrl+S shortcut
         if ((event.metaKey || event.ctrlKey) && event.key === 's') {

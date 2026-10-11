@@ -1,9 +1,10 @@
 'use client'
 
-import { EditorRoot, EditorContent, EditorCommand, EditorCommandItem, EditorCommandList, EditorCommandEmpty, EditorBubble, EditorBubbleItem, type JSONContent, handleCommandNavigation, createSuggestionItems, Command, renderItems, type SuggestionItem, StarterKit, Placeholder, HorizontalRule } from 'novel'
+import { EditorRoot, EditorContent, EditorCommand, EditorCommandItem, EditorCommandList, EditorCommandEmpty, EditorBubble, EditorBubbleItem, type JSONContent, handleCommandNavigation, createSuggestionItems, Command, renderItems, type SuggestionItem, StarterKit, Placeholder, HorizontalRule, TiptapImage } from 'novel'
 import { useState, useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { Heading1, Heading2, Heading3, List, ListOrdered, TextQuote, Code, CheckSquare, Minus, Text } from 'lucide-react'
+import { Heading1, Heading2, Heading3, List, ListOrdered, TextQuote, Code, CheckSquare, Minus, Text, ImageIcon } from 'lucide-react'
+import { handleImageDrop, handleImagePaste, insertImages, pickImageFiles } from '@/lib/editor-images'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const suggestionItems = createSuggestionItems([
@@ -27,6 +28,11 @@ const suggestionItems = createSuggestionItems([
     command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).toggleCodeBlock().run() },
   { title: '分割线', description: '水平分割线', searchTerms: ['hr', 'divider'], icon: <Minus size={18} />,
     command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setHorizontalRule().run() },
+  { title: '图片', description: '上传图片（也可直接粘贴或拖入）', searchTerms: ['image', 'img', 'photo', 'picture'], icon: <ImageIcon size={18} />,
+    command: ({ editor, range }: any) => {
+      editor.chain().focus().deleteRange(range).run()
+      pickImageFiles().then(files => insertImages(editor.view, files))
+    } },
 ])
 
 const slashCommand = Command.configure({
@@ -64,7 +70,7 @@ export default function NovelEditor({ content, onChange, onSave, placeholder = '
     <EditorRoot>
       <EditorContent
         initialContent={initialContent}
-        extensions={[StarterKit, Placeholder.configure({ placeholder }), HorizontalRule, slashCommand]}
+        extensions={[StarterKit, Placeholder.configure({ placeholder }), HorizontalRule, TiptapImage, slashCommand]}
         editable={editable}
         onUpdate={({ editor }) => debouncedOnChange(editor)}
         onCreate={({ editor }) => {
@@ -74,6 +80,8 @@ export default function NovelEditor({ content, onChange, onSave, placeholder = '
           }
         }}
         editorProps={{
+          handlePaste: (view, event) => handleImagePaste(view, event),
+          handleDrop: (view, event, _slice, moved) => handleImageDrop(view, event, moved),
           handleDOMEvents: {
             keydown: (_view, event) => {
               // Cmd/Ctrl+S

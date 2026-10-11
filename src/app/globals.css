@@ -30,6 +30,18 @@ body {
   font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
 }
 
+/* Images in rich-text content (diary / weekly / notes), both in editors and read views */
+.font-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid #3a7a4f;
+  outline-offset: 2px;
+}
+
 .main-content {
   margin-left: 180px;
   transition: margin-left 0.2s;
