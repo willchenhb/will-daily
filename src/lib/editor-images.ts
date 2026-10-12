@@ -1,5 +1,5 @@
-// Image paste / drop / pick support shared by Editor (tiptap v3) and NovelEditor (novel, tiptap v2).
-// Works on the raw ProseMirror view so it is independent of the tiptap version.
+// Image paste / drop / pick support for the rich-text Editor.
+// Works on the raw ProseMirror view.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type ImageView = { state: any; dispatch: (tr: any) => void; isDestroyed?: boolean }
@@ -11,10 +11,14 @@ const KEEP_ORIGINAL_BELOW = 300 * 1024 // small images (e.g. screenshots) are up
 // then would persist a broken image. Save handlers check this first.
 let pendingUploads = 0
 
-// Returns true (and tells the user) when saving must wait. Also checks the HTML itself,
-// since an editor may report its content on a debounce after the upload finished.
+// True while `html` still holds a temporary blob: image (autosave waits for these)
+export function hasPendingImages(html: string): boolean {
+  return html.includes('src="blob:')
+}
+
+// Returns true (and tells the user) when saving must wait
 export function blockSaveForPendingImages(html: string): boolean {
-  if (pendingUploads === 0 && !html.includes('src="blob:')) return false
+  if (pendingUploads === 0 && !hasPendingImages(html)) return false
   alert('图片还在上传中，请稍候再保存')
   return true
 }

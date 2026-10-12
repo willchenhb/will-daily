@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import WeeklyPlan from '@/components/WeeklyPlan'
-import Toast from '@/components/Toast'
 import Loading from '@/components/Loading'
 import { getWeekStart, getWeekEnd, getWeekNumber, getNextWeekStart, isFridayOrLater } from '@/lib/dates'
 
@@ -23,9 +24,18 @@ function weekLabel(weekStart: string): string {
 }
 
 export default function WeeklyPage() {
+  return (
+    <Suspense>
+      <WeeklyList />
+    </Suspense>
+  )
+}
+
+function WeeklyList() {
+  // ?week=YYYY-MM-DD (from search) shows just that week
+  const weekFilter = useSearchParams().get('week')
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const currentWeekStart = getWeekStart()
   const nextWeekStart = getNextWeekStart()
   const showNextWeek = isFridayOrLater()
@@ -33,54 +43,47 @@ export default function WeeklyPage() {
   const nextExists = plans.some(p => p.weekStart === nextWeekStart)
 
   const fetchPlans = useCallback(async () => {
-    const res = await fetch('/api/weekly')
+    const res = await fetch(weekFilter ? `/api/weekly?weekStart=${weekFilter}` : '/api/weekly')
     if (!res.ok) { setLoading(false); return }
     const data = await res.json()
     setPlans(data.plans)
     setLoading(false)
-  }, [])
+  }, [weekFilter])
 
   useEffect(() => { fetchPlans() }, [fetchPlans])
 
-  const handleSave = async (data: { id?: number; weekStart: string; content?: string }): Promise<number | undefined> => {
-    try {
-      if (data.id) {
-        const res = await fetch(`/api/weekly/${data.id}`, {
+  // Called by autosave: no refetch, which would remount the plan being edited
+  const handleSave = async (data: { id?: number; weekStart: string; content?: string }): Promise<number> => {
+    const res = data.id
+      ? await fetch(`/api/weekly/${data.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content: data.content }),
         })
-        const plan = await res.json()
-        setToast({ message: '已保存', type: 'success' })
-        fetchPlans()
-        return plan.id
-      } else {
-        const res = await fetch('/api/weekly', {
+      : await fetch('/api/weekly', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ weekStart: data.weekStart, content: data.content }),
         })
-        const plan = await res.json()
-        setToast({ message: '已创建', type: 'success' })
-        fetchPlans()
-        return plan.id
-      }
-    } catch {
-      setToast({ message: '保存失败', type: 'error' })
-      return undefined
-    }
+    if (!res.ok) throw new Error('保存失败')
+    const plan = await res.json()
+    return plan.id
   }
 
   if (loading) return <div className="max-w-3xl mx-auto px-8 py-6"><Loading /></div>
 
   return (
     <div className="max-w-3xl mx-auto px-8 py-6">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <h1 className="text-lg font-semibold text-gray-800 mb-4">周记</h1>
+      <div className="flex items-baseline justify-between mb-4">
+        <h1 className="text-lg font-semibold text-gray-800">周记</h1>
+        {weekFilter && (
+          <Link href="/weekly" className="text-[12px] text-gray-400 hover:text-gray-600">← 全部周记</Link>
+        )}
+      </div>
 
       {/* Next week placeholder (shown from Friday onwards) */}
-      {showNextWeek && !nextExists && (
+      {!weekFilter && showNextWeek && !nextExists && (
         <>
           <WeeklyPlan
             weekStart={nextWeekStart}
@@ -97,7 +100,7 @@ export default function WeeklyPage() {
       )}
 
       {/* Current week placeholder */}
-      {!currentExists && (
+      {!weekFilter && !currentExists && (
         <>
           <WeeklyPlan
             weekStart={currentWeekStart}

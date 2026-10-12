@@ -1,8 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Editor from './Editor'
-import { blockSaveForPendingImages } from '@/lib/editor-images'
+import SaveStatus from './SaveStatus'
+import { blockSaveForPendingImages, hasPendingImages } from '@/lib/editor-images'
+import { useAutosave } from '@/lib/use-autosave'
+import { isEmptyHtml } from '@/lib/html'
+import { internalHref } from '@/lib/wiki'
 
 interface DiaryEntryProps {
   id?: number
@@ -10,22 +15,36 @@ interface DiaryEntryProps {
   dateFormatted: string
   content: string
   isToday?: boolean
-  onSave: (data: { id?: number; date: string; content: string }) => Promise<void>
+  // Persists the entry and resolves to its id; rejects on failure
+  onSave: (data: { id?: number; date: string; content: string }) => Promise<number>
+  // Editing finished, e.g. to refresh the list
+  onDone?: () => void
   onDelete?: (id: number) => Promise<void>
 }
 
-export default function DiaryEntry({ id, date, dateFormatted, content: initialContent, isToday, onSave, onDelete }: DiaryEntryProps) {
+export default function DiaryEntry({ id, date, dateFormatted, content: initialContent, isToday, onSave, onDone, onDelete }: DiaryEntryProps) {
+  const router = useRouter()
   const [content, setContent] = useState(initialContent)
   const [editing, setEditing] = useState(isToday && !id)
-  const [saving, setSaving] = useState(false)
+  // A new entry gets its id from the first autosave
+  const idRef = useRef(id)
 
-  const handleSave = async () => {
-    if (!content || content === '<p></p>') return
+  const { status, flush } = useAutosave({
+    value: isEmptyHtml(content) ? '' : content,
+    save: async html => { idRef.current = await onSave({ id: idRef.current, date, content: html }) },
+    // An emptied entry is not saved; deleting is explicit
+    canSave: html => html !== '' && !hasPendingImages(html),
+  })
+
+  const handleDone = async () => {
+    if (isEmptyHtml(content)) {
+      if (idRef.current) alert('日记内容为空。如需删除，请点击"删除"')
+      return
+    }
     if (blockSaveForPendingImages(content)) return
-    setSaving(true)
-    await onSave({ id, date, content })
-    setSaving(false)
+    if (!(await flush())) return
     setEditing(false)
+    onDone?.()
   }
 
   return (
@@ -57,27 +76,32 @@ export default function DiaryEntry({ id, date, dateFormatted, content: initialCo
 
       {editing ? (
         <div>
-          <Editor content={content} onChange={setContent} placeholder="写点什么..." onSave={handleSave} />
-          <div className="flex gap-2 mt-2 justify-end">
+          <Editor content={content} onChange={setContent} placeholder="写点什么..." onSave={() => { flush() }} />
+          <div className="flex gap-3 mt-2 justify-end items-center">
+            <SaveStatus status={status} />
             <button
-              onClick={() => { setEditing(false); setContent(initialContent) }}
-              className="text-xs text-gray-400 hover:text-gray-600 px-3 py-1"
-            >
-              取消
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
+              onClick={handleDone}
+              disabled={status === 'saving'}
               className="text-xs text-white bg-[#3a7a4f] hover:bg-[#2d6b3f] px-3 py-1.5 rounded disabled:opacity-50"
             >
-              {saving ? '保存中...' : '保存'}
+              完成
             </button>
           </div>
         </div>
       ) : (
         <div
-          className="font-content text-[15px] text-gray-600 leading-relaxed cursor-pointer hover:bg-gray-50 rounded p-2 -m-2"
-          onClick={() => setEditing(true)}
+          className="font-content prose prose-sm max-w-none text-gray-600 leading-relaxed cursor-pointer hover:bg-gray-50 rounded p-2 -m-2"
+          onClick={e => {
+            // [[links]] and #tags navigate in-app; other links open normally
+            const href = internalHref(e.target)
+            if (href && !e.metaKey && !e.ctrlKey) {
+              e.preventDefault()
+              router.push(href)
+              return
+            }
+            if ((e.target as HTMLElement).closest('a')) return
+            setEditing(true)
+          }}
           dangerouslySetInnerHTML={{ __html: content }}
         />
       )}

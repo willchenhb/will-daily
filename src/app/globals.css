@@ -42,6 +42,120 @@ body {
   outline-offset: 2px;
 }
 
+/* Task lists (- [ ]) */
+.font-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.font-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+  padding-left: 0;
+}
+
+.font-content ul[data-type="taskList"] li > label {
+  flex: none;
+  margin-top: 0.2em;
+  user-select: none;
+}
+
+.font-content ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.font-content ul[data-type="taskList"] li > div > p {
+  margin: 0;
+}
+
+.font-content ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.font-content input[type="checkbox"] {
+  accent-color: #3a7a4f;
+  cursor: pointer;
+}
+
+/* Read views render stored HTML: checkboxes there are display-only */
+.font-content:not(.ProseMirror) input[type="checkbox"] {
+  pointer-events: none;
+}
+
+/* [[Note links]] and #tags (editor and read views) */
+.font-content a.wikilink {
+  color: #3a7a4f;
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px dashed #9cc3a8;
+  cursor: pointer;
+}
+
+.font-content a.wikilink:hover {
+  background: #eef5ee;
+}
+
+.tag {
+  display: inline-block;
+  color: #3a7a4f;
+  background: #eef5ee;
+  border-radius: 999px;
+  padding: 0 0.5em;
+  font-size: 0.9em;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.tag:hover {
+  background: #dcebdf;
+}
+
+.ProseMirror .ProseMirror-selectednode.wikilink,
+.ProseMirror .ProseMirror-selectednode.tag {
+  outline: 2px solid #3a7a4f;
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* Code block syntax highlighting (lowlight / highlight.js classes, on prose's dark <pre>) */
+.font-content pre code .hljs-comment,
+.font-content pre code .hljs-quote { color: #8b949e; font-style: italic; }
+.font-content pre code .hljs-keyword,
+.font-content pre code .hljs-selector-tag,
+.font-content pre code .hljs-meta .hljs-keyword,
+.font-content pre code .hljs-doctag { color: #ff7b72; }
+.font-content pre code .hljs-string,
+.font-content pre code .hljs-regexp,
+.font-content pre code .hljs-meta .hljs-string { color: #a5d6ff; }
+.font-content pre code .hljs-number,
+.font-content pre code .hljs-literal,
+.font-content pre code .hljs-variable,
+.font-content pre code .hljs-template-variable,
+.font-content pre code .hljs-attr,
+.font-content pre code .hljs-attribute,
+.font-content pre code .hljs-selector-attr,
+.font-content pre code .hljs-selector-class,
+.font-content pre code .hljs-selector-id { color: #79c0ff; }
+.font-content pre code .hljs-title,
+.font-content pre code .hljs-title.function_,
+.font-content pre code .hljs-section { color: #d2a8ff; }
+.font-content pre code .hljs-title.class_,
+.font-content pre code .hljs-type,
+.font-content pre code .hljs-built_in,
+.font-content pre code .hljs-name,
+.font-content pre code .hljs-tag { color: #7ee787; }
+.font-content pre code .hljs-symbol,
+.font-content pre code .hljs-bullet,
+.font-content pre code .hljs-link,
+.font-content pre code .hljs-meta { color: #ffa657; }
+.font-content pre code .hljs-addition { color: #aff5b4; background: rgba(46, 160, 67, 0.15); }
+.font-content pre code .hljs-deletion { color: #ffdcd7; background: rgba(248, 81, 73, 0.15); }
+.font-content pre code .hljs-emphasis { font-style: italic; }
+.font-content pre code .hljs-strong { font-weight: bold; }
+
 .main-content {
   margin-left: 180px;
   transition: margin-left 0.2s;

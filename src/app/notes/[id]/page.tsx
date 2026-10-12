@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import NovelEditor from '@/components/NovelEditor'
-import { blockSaveForPendingImages } from '@/lib/editor-images'
+import Editor from '@/components/Editor'
+import SaveStatus from '@/components/SaveStatus'
+import Backlinks from '@/components/Backlinks'
+import { hasPendingImages } from '@/lib/editor-images'
+import { useAutosave } from '@/lib/use-autosave'
 import Toast from '@/components/Toast'
 import Markdown from '@/components/Markdown'
 
@@ -23,14 +26,9 @@ export default function NoteDetailPage() {
   const [content, setContent] = useState('')
   const [category, setCategory] = useState('')
   const [categories, setCategories] = useState<string[]>([])
-  const [saving, setSaving] = useState(false)
   const [summarizing, setSummarizing] = useState(false)
   const [hasApiKey, setHasApiKey] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-
-  // Track dirty state for unsaved changes warning
-  const [isDirty, setIsDirty] = useState(false)
-  const savedValuesRef = useRef({ title: '', content: '', category: '' })
 
   const fetchNote = useCallback(async () => {
     const res = await fetch(`/api/notes/${id}`)
@@ -40,8 +38,6 @@ export default function NoteDetailPage() {
     setTitle(data.title)
     setContent(data.content)
     setCategory(data.category || '')
-    savedValuesRef.current = { title: data.title, content: data.content, category: data.category || '' }
-    setIsDirty(false)
   }, [id, router])
 
   const fetchCategories = useCallback(async () => {
@@ -62,65 +58,31 @@ export default function NoteDetailPage() {
 
   useEffect(() => { fetchNote(); fetchCategories(); checkApiKey() }, [fetchNote, fetchCategories, checkApiKey])
 
-  // Track dirty state
-  const handleTitleChange = (val: string) => {
-    setTitle(val)
-    setIsDirty(
-      val !== savedValuesRef.current.title ||
-      content !== savedValuesRef.current.content ||
-      category !== savedValuesRef.current.category
-    )
-  }
-
-  const handleContentChange = (val: string) => {
-    setContent(val)
-    setIsDirty(
-      title !== savedValuesRef.current.title ||
-      val !== savedValuesRef.current.content ||
-      category !== savedValuesRef.current.category
-    )
-  }
-
-  const handleCategoryChange = (val: string) => {
-    setCategory(val)
-    setIsDirty(
-      title !== savedValuesRef.current.title ||
-      content !== savedValuesRef.current.content ||
-      val !== savedValuesRef.current.category
-    )
-  }
-
-  // beforeunload warning for unsaved changes
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault()
-      }
-    }
-    window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
-  }, [isDirty])
-
-  const handleSave = async () => {
-    if (blockSaveForPendingImages(content)) return
-    setSaving(true)
-    try {
-      await fetch(`/api/notes/${id}`, {
+  const { status, flush } = useAutosave({
+    value: { title, content, category },
+    enabled: note !== null,
+    save: async v => {
+      const res = await fetch(`/api/notes/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content, category: category || null }),
+        body: JSON.stringify({ title: v.title, content: v.content, category: v.category || null }),
       })
-      setToast({ message: '已保存', type: 'success' })
-      savedValuesRef.current = { title, content, category }
-      setIsDirty(false)
-      fetchNote()
-    } catch {
-      setToast({ message: '保存失败', type: 'error' })
-    }
-    setSaving(false)
+      if (!res.ok) throw new Error('保存失败')
+    },
+    canSave: v => !hasPendingImages(v.content),
+  })
+
+  const handleBack = async () => {
+    await flush()
+    router.push('/notes')
   }
 
   const handleSummary = async () => {
+    // The summary is generated from the saved note
+    if (!(await flush())) {
+      setToast({ message: '笔记还没保存（图片上传中？），请稍后再试', type: 'error' })
+      return
+    }
     setSummarizing(true)
     try {
       const res = await fetch('/api/ai/summary', {
@@ -133,7 +95,9 @@ export default function NoteDetailPage() {
         throw new Error(err.error || 'Summary failed')
       }
       setToast({ message: '摘要已生成', type: 'success' })
-      fetchNote()
+      // Only the summary changed; keep the fields being edited untouched
+      const updated = await fetch(`/api/notes/${id}`).then(r => r.json())
+      setNote(updated)
     } catch (e) {
       setToast({ message: `生成摘要失败: ${e instanceof Error ? e.message : '未知错误'}`, type: 'error' })
     }
@@ -152,7 +116,7 @@ export default function NoteDetailPage() {
     <div className="max-w-3xl mx-auto px-8 py-6">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <button onClick={() => router.push('/notes')} className="text-[12px] text-gray-400 hover:text-gray-600 mb-4">
+      <button onClick={handleBack} className="text-[12px] text-gray-400 hover:text-gray-600 mb-4">
         {'\u2190'} 返回笔记
       </button>
 
@@ -165,7 +129,7 @@ export default function NoteDetailPage() {
 
       <input
         value={title}
-        onChange={e => handleTitleChange(e.target.value)}
+        onChange={e => setTitle(e.target.value)}
         className="w-full text-xl font-semibold text-gray-800 border-none outline-none mb-2 bg-transparent"
         placeholder="标题"
       />
@@ -173,7 +137,7 @@ export default function NoteDetailPage() {
       <div className="mb-4">
         <input
           value={category}
-          onChange={e => handleCategoryChange(e.target.value)}
+          onChange={e => setCategory(e.target.value)}
           list="category-suggestions"
           placeholder="分类（可选）"
           className="text-[12px] text-gray-500 border border-gray-100 rounded px-2 py-1 outline-none bg-transparent"
@@ -183,7 +147,9 @@ export default function NoteDetailPage() {
         </datalist>
       </div>
 
-      <NovelEditor content={content} onChange={handleContentChange} placeholder="开始写笔记..." onSave={handleSave} />
+      <div className="border border-gray-100 rounded-lg px-3 py-2">
+        <Editor content={content} onChange={setContent} placeholder="开始写笔记，输入 / 插入内容..." onSave={() => { flush() }} contentClassName="min-h-[300px]" />
+      </div>
 
       <div className="flex justify-between items-center mt-4">
         <div className="flex gap-2">
@@ -203,14 +169,10 @@ export default function NoteDetailPage() {
             删除
           </button>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="text-xs text-white bg-[#3a7a4f] hover:bg-[#2d6b3f] px-4 py-1.5 rounded disabled:opacity-50"
-        >
-          {saving ? '保存中...' : '保存'}
-        </button>
+        <SaveStatus status={status} />
       </div>
+
+      <Backlinks noteId={note.id} title={note.title} />
     </div>
   )
 }

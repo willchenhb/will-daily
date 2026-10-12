@@ -1,9 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import TodoItem from './TodoItem'
 import Editor from './Editor'
-import { blockSaveForPendingImages } from '@/lib/editor-images'
+import SaveStatus from './SaveStatus'
+import { blockSaveForPendingImages, hasPendingImages } from '@/lib/editor-images'
+import { useAutosave } from '@/lib/use-autosave'
+import { isEmptyHtml } from '@/lib/html'
+import { internalHref } from '@/lib/wiki'
 
 interface Todo {
   id: number
@@ -21,7 +26,8 @@ interface WeeklyPlanProps {
   todos: Todo[]
   isCurrent?: boolean
   isNext?: boolean
-  onSave: (data: { id?: number; weekStart: string; content?: string }) => Promise<number | undefined>
+  // Creates or updates the plan and resolves to its id; rejects on failure
+  onSave: (data: { id?: number; weekStart: string; content?: string }) => Promise<number>
   onRefresh: () => void
 }
 
@@ -36,26 +42,37 @@ export default function WeeklyPlan({
   onSave,
   onRefresh,
 }: WeeklyPlanProps) {
+  const router = useRouter()
   const [content, setContent] = useState(initialContent || '')
   const [editingContent, setEditingContent] = useState(false)
   const [newTodo, setNewTodo] = useState('')
-  const [saving, setSaving] = useState(false)
+  // A placeholder week gets its id from the first save
+  const planIdRef = useRef(id)
 
-  const handleSaveContent = async () => {
+  const { status, flush } = useAutosave({
+    value: isEmptyHtml(content) ? '' : content,
+    save: async html => { planIdRef.current = await onSave({ id: planIdRef.current, weekStart, content: html }) },
+    canSave: html => !hasPendingImages(html),
+  })
+
+  const handleDone = async () => {
     if (blockSaveForPendingImages(content)) return
-    setSaving(true)
-    await onSave({ id, weekStart, content })
-    setSaving(false)
+    if (!(await flush())) return
     setEditingContent(false)
+    onRefresh()
   }
 
   const handleAddTodo = async () => {
     if (!newTodo.trim()) return
-    let planId = id
+    let planId = planIdRef.current
     if (!planId) {
-      planId = await onSave({ weekStart })
+      try {
+        planId = planIdRef.current = await onSave({ weekStart })
+      } catch {
+        alert('创建周记失败')
+        return
+      }
     }
-    if (!planId) return
 
     await fetch(`/api/weekly/${planId}/todos`, {
       method: 'POST',
@@ -81,18 +98,28 @@ export default function WeeklyPlan({
       <div className="mb-4">
         {editingContent ? (
           <div>
-            <Editor content={content} onChange={setContent} placeholder="本周总结和思考..." />
-            <div className="flex gap-2 mt-2 justify-end">
-              <button onClick={() => { setEditingContent(false); setContent(initialContent || '') }} className="text-xs text-gray-400 px-3 py-1">取消</button>
-              <button onClick={handleSaveContent} disabled={saving} className="text-xs text-white bg-[#3a7a4f] hover:bg-[#2d6b3f] px-3 py-1.5 rounded disabled:opacity-50">
-                {saving ? '保存中...' : '保存'}
+            <Editor content={content} onChange={setContent} placeholder="本周总结和思考..." onSave={() => { flush() }} />
+            <div className="flex gap-3 mt-2 justify-end items-center">
+              <SaveStatus status={status} />
+              <button onClick={handleDone} disabled={status === 'saving'} className="text-xs text-white bg-[#3a7a4f] hover:bg-[#2d6b3f] px-3 py-1.5 rounded disabled:opacity-50">
+                完成
               </button>
             </div>
           </div>
-        ) : content ? (
+        ) : !isEmptyHtml(content) ? (
           <div
-            className="font-content text-[14px] text-gray-500 leading-relaxed cursor-pointer hover:bg-gray-50 rounded p-2 -m-2"
-            onClick={() => setEditingContent(true)}
+            className="font-content prose prose-sm max-w-none text-gray-500 leading-relaxed cursor-pointer hover:bg-gray-50 rounded p-2 -m-2"
+            onClick={e => {
+              // [[links]] and #tags navigate in-app; other links open normally
+              const href = internalHref(e.target)
+              if (href && !e.metaKey && !e.ctrlKey) {
+                e.preventDefault()
+                router.push(href)
+                return
+              }
+              if ((e.target as HTMLElement).closest('a')) return
+              setEditingContent(true)
+            }}
             dangerouslySetInnerHTML={{ __html: content }}
           />
         ) : (isCurrent || isNext) ? (
