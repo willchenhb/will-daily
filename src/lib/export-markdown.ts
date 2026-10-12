@@ -12,6 +12,7 @@ interface Todo { text: string; completed: boolean; note: string | null }
 interface Plan { id: number; weekStart: string; title: string | null; content: string | null; todos: Todo[] }
 
 const PAGE = 100
+const DOWNLOAD_CONCURRENCY = 6
 const UPLOAD_SRC = /\]\((\/api\/uploads\/[0-9a-f-]{36})\)/g
 const EXT_BY_MIME: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }
 
@@ -119,16 +120,19 @@ export async function exportMarkdownZip(onProgress: (message: string) => void): 
     Array.from(read(path).matchAll(UPLOAD_SRC), m => uploads.add(m[1]))
   }
   const attachmentOf = new Map<string, string>()
+  const sources = Array.from(uploads)
   let done = 0
-  for (const src of Array.from(uploads)) {
-    onProgress(`下载图片 ${++done}/${uploads.size}…`)
-    const res = await fetch(src)
-    if (!res.ok) continue
-    const blob = await res.blob()
-    const name = `${src.split('/').pop()}.${EXT_BY_MIME[blob.type] || 'img'}`
-    // Already compressed: store without deflating
-    files[`attachments/${name}`] = [new Uint8Array(await blob.arrayBuffer()), { level: 0 }]
-    attachmentOf.set(src, name)
+  for (let i = 0; i < sources.length; i += DOWNLOAD_CONCURRENCY) {
+    await Promise.all(sources.slice(i, i + DOWNLOAD_CONCURRENCY).map(async src => {
+      const res = await fetch(src).catch(() => null)
+      onProgress(`下载图片 ${++done}/${sources.length}…`)
+      if (!res?.ok) return
+      const blob = await res.blob()
+      const name = `${src.split('/').pop()}.${EXT_BY_MIME[blob.type] || 'img'}`
+      // Already compressed: store without deflating
+      files[`attachments/${name}`] = [new Uint8Array(await blob.arrayBuffer()), { level: 0 }]
+      attachmentOf.set(src, name)
+    }))
   }
   if (attachmentOf.size) {
     for (const path of markdownPaths) {
