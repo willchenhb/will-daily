@@ -1,22 +1,13 @@
 'use client'
 
 import { useEditor, EditorContent, type Editor as TiptapEditor } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import ImageExtension from '@tiptap/extension-image'
-import { TaskList, TaskItem } from '@tiptap/extension-list'
-import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
-import { Markdown } from '@tiptap/markdown'
-import { createLowlight, common } from 'lowlight'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { handleImageDrop, handleImagePaste, insertImages, pickImageFiles } from '@/lib/editor-images'
 import { markdownFromPaste } from '@/lib/editor-markdown'
-import { BulletToTask } from '@/lib/editor-task-input'
-import { Tag, WikiLink } from '@/lib/editor-wiki'
+import { contentExtensions } from '@/lib/editor-extensions'
 import { TAG_CHAR_CLASS, internalHref, isValidTag } from '@/lib/wiki'
-
-const lowlight = createLowlight(common)
 
 interface EditorProps {
   content: string
@@ -209,21 +200,7 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
   }
 
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        codeBlock: false, // replaced by CodeBlockLowlight
-        link: { openOnClick: false, autolink: true, linkOnPaste: true, defaultProtocol: 'https' },
-      }),
-      Placeholder.configure({ placeholder }),
-      ImageExtension,
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      BulletToTask,
-      CodeBlockLowlight.configure({ lowlight }),
-      WikiLink,
-      Tag,
-      Markdown,
-    ],
+    extensions: [...contentExtensions(), Placeholder.configure({ placeholder })],
     content,
     editable,
     immediatelyRender: false,

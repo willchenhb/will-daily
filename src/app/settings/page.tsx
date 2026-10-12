@@ -21,6 +21,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [template, setTemplate] = useState<string | null>(null)
   const [savingTemplate, setSavingTemplate] = useState(false)
+  const [exportProgress, setExportProgress] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   const fetchSettings = useCallback(async () => {
@@ -63,6 +64,25 @@ export default function SettingsPage() {
       setToast({ message: '保存失败', type: 'error' })
     }
     setSavingTemplate(false)
+  }
+
+  const handleExport = async () => {
+    setExportProgress('准备中…')
+    try {
+      // Loaded on demand: pulls in the zip library
+      const { exportMarkdownZip } = await import('@/lib/export-markdown')
+      const blob = await exportMarkdownZip(setExportProgress)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `will-daily-${new Date().toISOString().slice(0, 10)}.zip`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 10000)
+      setToast({ message: '导出完成', type: 'success' })
+    } catch (e) {
+      setToast({ message: `导出失败：${e instanceof Error ? e.message : '未知错误'}`, type: 'error' })
+    }
+    setExportProgress(null)
   }
 
   return (
@@ -133,6 +153,20 @@ export default function SettingsPage() {
             className="text-[13px] text-[#3a7a4f] border border-[#c5d9c5] px-4 py-2 rounded hover:bg-[#f0faf4] disabled:opacity-50"
           >
             {savingTemplate ? '保存中...' : '保存模板'}
+          </button>
+        </div>
+
+        <div className="border-t border-gray-100 pt-5">
+          <h2 className="text-[14px] font-medium text-gray-700 mb-2">导出 Markdown</h2>
+          <p className="text-[12px] text-gray-400 mb-3 leading-relaxed">
+            把全部笔记、日记、周记和图片打包成 .zip，可直接用 Obsidian 打开，[[链接]] 和 #标签 都能识别；也可当作离线备份。
+          </p>
+          <button
+            onClick={handleExport}
+            disabled={exportProgress !== null}
+            className="text-[13px] text-[#3a7a4f] border border-[#c5d9c5] px-4 py-2 rounded hover:bg-[#f0faf4] disabled:opacity-50"
+          >
+            {exportProgress ?? '导出全部为 Markdown'}
           </button>
         </div>
       </div>

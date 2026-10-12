@@ -34,6 +34,8 @@ export const WikiLink = Node.create({
   renderText({ node }) {
     return `[[${node.attrs.label}]]`
   },
+
+  renderMarkdown: node => `[[${node.attrs?.label ?? ''}]]`,
 })
 
 // "#读书 " (a tag followed by a space) becomes a tag chip
@@ -63,6 +65,8 @@ export const Tag = Node.create({
   renderText({ node }) {
     return `#${node.attrs.name}`
   },
+
+  renderMarkdown: node => `#${node.attrs?.name ?? ''}`,
 
   addInputRules() {
     return [
