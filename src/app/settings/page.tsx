@@ -133,7 +133,7 @@ export default function SettingsPage() {
           {saving ? '保存中...' : '保存设置'}
         </button>
 
-        <div className="border-t border-gray-100 pt-5">
+        <div id="template" className="border-t border-gray-100 pt-5 scroll-mt-20">
           <h2 className="text-[14px] font-medium text-gray-700 mb-2">日记模板</h2>
           <p className="text-[12px] text-gray-400 mb-3 leading-relaxed">
             新建日记时自动填入，可用「/待办列表」「## 标题」等格式。
@@ -156,7 +156,7 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        <div className="border-t border-gray-100 pt-5">
+        <div id="export" className="border-t border-gray-100 pt-5 scroll-mt-20">
           <h2 className="text-[14px] font-medium text-gray-700 mb-2">导出 Markdown</h2>
           <p className="text-[12px] text-gray-400 mb-3 leading-relaxed">
             把全部笔记、日记、周记和图片打包成 .zip，可直接用 Obsidian 打开，[[链接]] 和 #标签 都能识别；也可当作离线备份。

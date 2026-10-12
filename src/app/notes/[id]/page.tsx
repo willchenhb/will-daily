@@ -5,11 +5,13 @@ import { useParams, useRouter } from 'next/navigation'
 import Editor from '@/components/Editor'
 import SaveStatus from '@/components/SaveStatus'
 import Backlinks from '@/components/Backlinks'
+import NoteOutline from '@/components/NoteOutline'
 import ConflictNotice from '@/components/ConflictNotice'
 import RevisionHistory from '@/components/RevisionHistory'
 import { hasPendingImages } from '@/lib/editor-images'
 import { useAutosave } from '@/lib/use-autosave'
 import { keepInHistory, saveDoc, type SaveFlags } from '@/lib/save-doc'
+import { setPinned } from '@/lib/bookmarks'
 import Toast from '@/components/Toast'
 import Markdown from '@/components/Markdown'
 
@@ -19,6 +21,7 @@ interface NoteDetail {
   content: string
   category: string | null
   summary: string | null
+  pinnedAt: string | null
   updatedAt: string
 }
 
@@ -34,6 +37,7 @@ export default function NoteDetailPage() {
   const [hasApiKey, setHasApiKey] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [pinned, setPinnedState] = useState(false)
   // Title as last saved, so backlinks follow renames
   const [savedTitle, setSavedTitle] = useState('')
   // Bumped to remount the editor with new content (restore, reload after conflict)
@@ -41,6 +45,7 @@ export default function NoteDetailPage() {
   // Version being edited (server updatedAt), and flags for the next save
   const versionRef = useRef<string | null>(null)
   const nextSaveFlags = useRef<SaveFlags>({})
+  const editorBoxRef = useRef<HTMLDivElement>(null)
 
   const fetchNote = useCallback(async () => {
     const res = await fetch(`/api/notes/${id}`)
@@ -51,6 +56,7 @@ export default function NoteDetailPage() {
     setContent(data.content)
     setCategory(data.category || '')
     setSavedTitle(data.title)
+    setPinnedState(!!data.pinnedAt)
     versionRef.current = data.updatedAt
   }, [id, router])
 
@@ -171,12 +177,25 @@ export default function NoteDetailPage() {
         </div>
       )}
 
-      <input
-        value={title}
-        onChange={e => setTitle(e.target.value)}
-        className="w-full text-xl font-semibold text-gray-800 border-none outline-none mb-2 bg-transparent"
-        placeholder="标题"
-      />
+      <div className="flex items-center gap-2 mb-2">
+        <input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          className="flex-1 min-w-0 text-xl font-semibold text-gray-800 border-none outline-none bg-transparent"
+          placeholder="标题"
+        />
+        <button
+          onClick={async () => {
+            const next = !pinned
+            setPinnedState(next)
+            if (!(await setPinned(note.id, next))) setPinnedState(!next)
+          }}
+          title={pinned ? '取消收藏' : '收藏'}
+          className={`flex-none text-lg leading-none ${pinned ? 'text-amber-400' : 'text-gray-200 hover:text-amber-300'}`}
+        >
+          {pinned ? '★' : '☆'}
+        </button>
+      </div>
 
       <div className="mb-4">
         <input
@@ -193,8 +212,10 @@ export default function NoteDetailPage() {
 
       {conflict !== null && <ConflictNotice onReload={loadLatest} onOverwrite={overwrite} />}
 
-      <div className="border border-gray-100 rounded-lg px-3 py-2">
-        <Editor key={editorKey} content={content} onChange={setContent} placeholder="开始写笔记，输入 / 插入内容..." onSave={() => { flush() }} contentClassName="min-h-[300px]" />
+      <NoteOutline containerRef={editorBoxRef} version={`${editorKey}:${content}`} />
+
+      <div ref={editorBoxRef} className="border border-gray-100 rounded-lg px-3 py-2">
+        <Editor key={editorKey} content={content} onChange={setContent} placeholder="开始写笔记，输入 / 插入内容..." onSave={() => { flush() }} contentClassName="min-h-[300px]" showWordCount />
       </div>
 
       <div className="flex justify-between items-center mt-4">

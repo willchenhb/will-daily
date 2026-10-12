@@ -156,7 +156,7 @@ export default function WeeklyPlan({
       <div className="mb-4">
         {editingContent ? (
           <div>
-            <Editor key={editorKey} content={content} onChange={setContent} placeholder="本周总结和思考..." onSave={() => { flush() }} />
+            <Editor key={editorKey} content={content} onChange={setContent} placeholder="本周总结和思考..." onSave={() => { flush() }} showWordCount />
             <div className="flex gap-3 mt-2 justify-end items-center">
               <SaveStatus status={status} />
               <button onClick={handleDone} disabled={status === 'saving'} className="text-xs text-white bg-[#3a7a4f] hover:bg-[#2d6b3f] px-3 py-1.5 rounded disabled:opacity-50">

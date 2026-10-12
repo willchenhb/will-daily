@@ -1,6 +1,6 @@
 'use client'
 
-import { useEditor, EditorContent, type Editor as TiptapEditor } from '@tiptap/react'
+import { useEditor, EditorContent, getHTMLFromFragment, type Editor as TiptapEditor } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
@@ -8,6 +8,7 @@ import { handleImageDrop, handleImagePaste, insertImages, pickImageFiles } from 
 import { markdownFromPaste } from '@/lib/editor-markdown'
 import { contentExtensions } from '@/lib/editor-extensions'
 import { TAG_CHAR_CLASS, internalHref, isValidTag } from '@/lib/wiki'
+import { countWords } from '@/lib/word-count'
 
 interface EditorProps {
   content: string
@@ -17,6 +18,8 @@ interface EditorProps {
   onSave?: () => void
   // Classes for the editable area, e.g. its minimum height
   contentClassName?: string
+  // Word count (and selection count) under the editor
+  showWordCount?: boolean
 }
 
 // Prompt for a URL and apply it to the selection (or the link under the cursor)
@@ -41,6 +44,29 @@ function insertWikiLink(editor: TiptapEditor, noteId: number, label: string, at?
   const content = [{ type: 'wikiLink', attrs: { noteId, label } }, { type: 'text', text: ' ' }]
   if (at == null) editor.chain().focus().insertContent(content).run()
   else editor.chain().focus().insertContentAt(at, content).run()
+}
+
+// 拆为新笔记: move the selection into a new note and leave a [[link]] in its place
+async function extractToNote(editor: TiptapEditor) {
+  const { from, to } = editor.state.selection
+  if (from === to) return
+  const fragment = editor.state.doc.slice(from, to).content
+  const inlineOnly = fragment.firstChild?.isInline ?? false
+  const html = (inlineOnly ? '<p>' : '') + getHTMLFromFragment(fragment, editor.schema) + (inlineOnly ? '</p>' : '')
+  const firstLine = editor.state.doc.textBetween(from, to, '\n').split('\n').map(l => l.trim()).find(Boolean)
+  const title = window.prompt('新笔记标题（选中的内容会移到新笔记，这里留下链接）', (firstLine || '新笔记').slice(0, 40))?.trim()
+  if (!title) return
+  const res = await fetch('/api/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content: html }),
+  })
+  if (!res.ok) {
+    alert('新建笔记失败')
+    return
+  }
+  const note = await res.json()
+  editor.chain().focus().insertContentAt({ from, to }, [{ type: 'wikiLink', attrs: { noteId: note.id, label: note.title } }]).run()
 }
 
 function insertTag(editor: TiptapEditor, name: string) {
@@ -90,7 +116,7 @@ function detectTrigger(editor: TiptapEditor): Omit<MenuTrigger, 'top' | 'left'> 
 
 interface NoteHit { id: number; title: string }
 
-export default function Editor({ content, onChange, placeholder = '输入 / 插入内容...', editable = true, onSave, contentClassName = 'min-h-[60px]' }: EditorProps) {
+export default function Editor({ content, onChange, placeholder = '输入 / 插入内容...', editable = true, onSave, contentClassName = 'min-h-[60px]', showWordCount = false }: EditorProps) {
   const router = useRouter()
   const [menu, setMenu] = useState<MenuTrigger | null>(null)
   const [menuIndex, setMenuIndex] = useState(0)
@@ -98,6 +124,7 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
   const [knownTags, setKnownTags] = useState<string[] | null>(null)
   const [bubblePos, setBubblePos] = useState<{ top: number; left: number } | null>(null)
   const [showBubble, setShowBubble] = useState(false)
+  const [stats, setStats] = useState({ words: 0, selected: 0 })
   const menuRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<TiptapEditor | null>(null)
@@ -105,6 +132,15 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
   routerRef.current = router
   const onSaveRef = useRef(onSave)
   onSaveRef.current = onSave
+
+  const updateStats = (editor: TiptapEditor) => {
+    if (!showWordCount) return
+    const { doc, selection } = editor.state
+    setStats({
+      words: countWords(doc.textBetween(0, doc.content.size, '\n', ' ')),
+      selected: selection.empty ? 0 : countWords(doc.textBetween(selection.from, selection.to, '\n', ' ')),
+    })
+  }
 
   const updateMenu = (editor: TiptapEditor) => {
     const trigger = detectTrigger(editor)
@@ -204,13 +240,18 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
     content,
     editable,
     immediatelyRender: false,
-    onCreate: ({ editor }) => { editorRef.current = editor },
+    onCreate: ({ editor }) => {
+      editorRef.current = editor
+      updateStats(editor)
+    },
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
       updateMenu(editor)
+      updateStats(editor)
     },
     onSelectionUpdate: ({ editor }) => {
       updateMenu(editor)
+      updateStats(editor)
       const { from, to } = editor.state.selection
       // Text formatting doesn't apply to a selected image / link chip or inside code
       if (from === to || !editable || ['image', 'wikiLink', 'tag', 'codeBlock'].some(n => editor.isActive(n))) {
@@ -222,10 +263,10 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
       const endCoords = editor.view.coordsAtPos(to)
       const editorRect = editor.view.dom.getBoundingClientRect()
       const rawTop = coords.top - editorRect.top - 40
-      const rawLeft = (coords.left + endCoords.left) / 2 - editorRect.left - 100
+      const rawLeft = (coords.left + endCoords.left) / 2 - editorRect.left - 140
       setBubblePos({
         top: Math.max(0, rawTop),
-        left: Math.max(0, Math.min(rawLeft, editorRect.width - 240)),
+        left: Math.max(0, Math.min(rawLeft, editorRect.width - 300)),
       })
       setShowBubble(true)
     },
@@ -360,6 +401,12 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
             className={bubbleButton(editor.isActive('link'))}
             title="链接 (⌘K)"
           >🔗</button>
+          <div className="w-px h-4 bg-gray-600 mx-0.5" />
+          <button
+            onMouseDown={e => { e.preventDefault(); extractToNote(editor) }}
+            className={bubbleButton(false)}
+            title="拆为新笔记：选中内容移到一篇新笔记，这里留下链接"
+          >↗ 新笔记</button>
         </div>
       )}
 
@@ -389,6 +436,12 @@ export default function Editor({ content, onChange, placeholder = '输入 / 插�
       )}
 
       <EditorContent editor={editor} />
+
+      {showWordCount && (
+        <div className="mt-1 text-right text-[11px] text-gray-300 select-none">
+          {stats.selected > 0 ? `选中 ${stats.selected} · ` : ''}共 {stats.words.toLocaleString()} 字
+        </div>
+      )}
     </div>
   )
 }

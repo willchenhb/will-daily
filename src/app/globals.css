@@ -42,6 +42,11 @@ body {
   outline-offset: 2px;
 }
 
+/* Outline jumps leave room for the mobile top bar */
+.ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
+  scroll-margin-top: 72px;
+}
+
 /* Task lists (- [ ]) */
 .font-content ul[data-type="taskList"] {
   list-style: none;

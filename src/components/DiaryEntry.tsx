@@ -132,7 +132,7 @@ export default function DiaryEntry({ id, date, dateFormatted, content: initialCo
 
       {editing ? (
         <div>
-          <Editor key={editorKey} content={content} onChange={setContent} placeholder="写点什么..." onSave={() => { flush() }} />
+          <Editor key={editorKey} content={content} onChange={setContent} placeholder="写点什么..." onSave={() => { flush() }} showWordCount />
           <div className="flex gap-3 mt-2 justify-end items-center">
             <SaveStatus status={status} />
             <button
