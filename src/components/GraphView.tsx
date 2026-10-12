@@ -13,6 +13,7 @@ interface GraphNode {
   title: string
   snippet: string
   embedding: string | null
+  href: string
 }
 
 interface GraphEdge {
@@ -21,15 +22,32 @@ interface GraphEdge {
   weight: number
 }
 
+// A document taking part in a [[link]], and a link between two of them
+interface LinkDoc { key: string; sourceType: string; sourceId: number; title: string; href: string }
+interface WikiEdge { from: string; to: string; count: number }
+
 interface GraphData {
   nodes: GraphNode[]
   edges: GraphEdge[]
+  docs: LinkDoc[]
+  links: WikiEdge[]
 }
 
-// Selected item can be a keyword or a content node
+// One document in the graph: from the keyword index, the link index, or both
+interface Doc {
+  key: string // `${sourceType}:${sourceId}`
+  sourceType: string
+  sourceId: number
+  title: string
+  href: string
+  snippet?: string
+  contentNodeId?: number
+}
+
+// Selected item can be a keyword or a document
 type SelectedItem =
   | { type: 'keyword'; keyword: string }
-  | { type: 'content'; node: GraphNode }
+  | { type: 'doc'; key: string }
 
 const TYPE_COLORS: Record<string, string> = {
   diary: '#3b82f6',
@@ -45,16 +63,13 @@ const TYPE_LABELS: Record<string, string> = {
   note: '笔记',
 }
 
-const TYPE_LINKS: Record<string, (sourceId: number) => string> = {
-  diary: () => '/diary',
-  weekly: () => '/weekly',
-  article: (id) => `/curated/${id}`,
-  note: (id) => `/notes/${id}`,
-}
-
 const KEYWORD_COLOR = '#1e293b'
 const KEYWORD_SELECTED_COLOR = '#ef4444'
+const LINK_COLOR = '#3a7a4f'
 const MIN_KEYWORD_REFS = 3 // keyword must appear in at least N content nodes
+
+const docKeyOf = (type: string, id: number) => `${type}:${id}`
+const graphIdOf = (key: string) => `doc:${key}`
 
 function buildKeywordGraph(data: GraphData, filters: Record<string, boolean>, searchTerm: string) {
   // Parse embeddings and collect keyword stats
@@ -92,9 +107,12 @@ function buildKeywordGraph(data: GraphData, filters: Record<string, boolean>, se
 }
 
 function GraphLoader({
-  data, filters, searchTerm, onSelect, selectedItem,
+  data, docs, links, showKeywords, filters, searchTerm, onSelect, selectedItem,
 }: {
   data: GraphData
+  docs: Map<string, Doc>
+  links: WikiEdge[] // already filtered to visible documents
+  showKeywords: boolean
   filters: Record<string, boolean>
   searchTerm: string
   onSelect: (item: SelectedItem | null) => void
@@ -111,36 +129,38 @@ function GraphLoader({
 
   useEffect(() => {
     const graph = new Graph()
+    const keywords = showKeywords ? significantKeywords : new Map<string, { nodeId: number; weight: number }[]>()
+    const keyOfContentNode = new Map(data.nodes.map(n => [n.id, docKeyOf(n.sourceType, n.sourceId)]))
 
     const selectedKeyword = selectedItem?.type === 'keyword' ? selectedItem.keyword : null
-    const selectedContentId = selectedItem?.type === 'content' ? selectedItem.node.id : null
+    const selectedDoc = selectedItem?.type === 'doc' ? selectedItem.key : null
 
-    // Collect which content nodes are connected to selected keyword
-    const highlightedContentIds = new Set<number>()
-    // Collect which keywords are connected to selected content node
+    // Documents tied to the selected keyword, or linked to the selected document
+    const highlightedDocs = new Set<string>()
+    // Keywords tied to the selected document
     const highlightedKeywords = new Set<string>()
 
-    if (selectedKeyword && significantKeywords.has(selectedKeyword)) {
-      for (const ref of significantKeywords.get(selectedKeyword)!) {
-        highlightedContentIds.add(ref.nodeId)
+    if (selectedKeyword && keywords.has(selectedKeyword)) {
+      for (const ref of keywords.get(selectedKeyword)!) {
+        const key = keyOfContentNode.get(ref.nodeId)
+        if (key) highlightedDocs.add(key)
       }
     }
-    if (selectedContentId) {
-      for (const [kw, refs] of Array.from(significantKeywords.entries())) {
-        if (refs.some(r => r.nodeId === selectedContentId)) {
-          highlightedKeywords.add(kw)
-        }
+    if (selectedDoc) {
+      for (const [kw, refs] of Array.from(keywords.entries())) {
+        if (refs.some(r => keyOfContentNode.get(r.nodeId) === selectedDoc)) highlightedKeywords.add(kw)
+      }
+      for (const l of links) {
+        if (l.from === selectedDoc) highlightedDocs.add(l.to)
+        if (l.to === selectedDoc) highlightedDocs.add(l.from)
       }
     }
 
-    // Add keyword nodes
-    for (const [kw, refs] of Array.from(significantKeywords.entries())) {
-      const refCount = refs.length
-      const size = Math.min(18, Math.max(8, 6 + refCount * 1.5))
+    // Keyword nodes
+    for (const [kw, refs] of Array.from(keywords.entries())) {
+      const size = Math.min(18, Math.max(8, 6 + refs.length * 1.5))
       const isSelected = kw === selectedKeyword
-      const isHighlighted = highlightedKeywords.has(kw)
-      const dimmed = (selectedKeyword && !isSelected) || (selectedContentId && !isHighlighted)
-
+      const dimmed = (selectedKeyword && !isSelected) || (selectedDoc && !highlightedKeywords.has(kw))
       graph.addNode(`kw:${kw}`, {
         label: kw,
         x: Math.random() * 100,
@@ -151,44 +171,67 @@ function GraphLoader({
       })
     }
 
-    // Add content nodes (only those connected to at least one significant keyword)
-    const contentNodesInGraph = new Set<number>()
-    for (const node of filteredNodes) {
-      let hasKeyword = false
-      for (const [kw] of Array.from(significantKeywords.entries())) {
-        if (significantKeywords.get(kw)!.some(r => r.nodeId === node.id)) {
-          hasKeyword = true
-          break
-        }
-      }
-      if (!hasKeyword) continue
+    // Link degree sizes linked documents, like Obsidian's graph
+    const degree = new Map<string, number>()
+    for (const l of links) {
+      degree.set(l.from, (degree.get(l.from) || 0) + 1)
+      degree.set(l.to, (degree.get(l.to) || 0) + 1)
+    }
 
-      contentNodesInGraph.add(node.id)
-      const isSelected = node.id === selectedContentId
-      const isHighlighted = highlightedContentIds.has(node.id)
-      const dimmed = (selectedKeyword && !isHighlighted) || (selectedContentId && !isSelected)
-
-      graph.addNode(String(node.id), {
-        label: node.title,
+    const addDoc = (key: string) => {
+      const id = graphIdOf(key)
+      if (graph.hasNode(id)) return
+      const doc = docs.get(key)
+      if (!doc) return
+      const isSelected = key === selectedDoc
+      const dimmed = (selectedKeyword || selectedDoc) && !isSelected && !highlightedDocs.has(key)
+      graph.addNode(id, {
+        label: doc.title,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: isSelected ? 10 : 6,
-        color: isSelected ? KEYWORD_SELECTED_COLOR : dimmed ? '#e5e7eb' : TYPE_COLORS[node.sourceType] || '#9ca3af',
+        size: isSelected ? 10 : 6 + Math.min(6, degree.get(key) || 0),
+        color: isSelected ? KEYWORD_SELECTED_COLOR : dimmed ? '#e5e7eb' : TYPE_COLORS[doc.sourceType] || '#9ca3af',
       })
     }
 
-    // Add edges: content -> keyword
-    for (const [kw, refs] of Array.from(significantKeywords.entries())) {
+    // Content nodes connected to at least one significant keyword
+    const keywordNodeIds = new Set(Array.from(keywords.values()).flatMap(refs => refs.map(r => r.nodeId)))
+    for (const node of filteredNodes) {
+      if (keywordNodeIds.has(node.id)) addDoc(docKeyOf(node.sourceType, node.sourceId))
+    }
+
+    // Edges: content -> keyword
+    for (const [kw, refs] of Array.from(keywords.entries())) {
       for (const ref of refs) {
-        if (!contentNodesInGraph.has(ref.nodeId)) continue
-        const isActive = kw === selectedKeyword || ref.nodeId === selectedContentId
+        const key = keyOfContentNode.get(ref.nodeId)
+        if (!key || !graph.hasNode(graphIdOf(key))) continue
+        const isActive = kw === selectedKeyword || key === selectedDoc
         try {
-          graph.addEdge(String(ref.nodeId), `kw:${kw}`, {
+          graph.addEdge(graphIdOf(key), `kw:${kw}`, {
             size: isActive ? 2 : 0.5,
             color: isActive ? '#94a3b8' : '#e5e7eb',
           })
         } catch { /* skip duplicate */ }
       }
+    }
+
+    // Edges: document -> document ([[links]]); links in both directions share one thicker edge
+    for (const l of links) {
+      addDoc(l.from)
+      addDoc(l.to)
+      const from = graphIdOf(l.from)
+      const to = graphIdOf(l.to)
+      if (!graph.hasNode(from) || !graph.hasNode(to)) continue
+      const isActive = l.from === selectedDoc || l.to === selectedDoc
+      const dimmed = (selectedKeyword || selectedDoc) && !isActive
+      if (graph.hasEdge(to, from)) {
+        graph.updateEdgeAttribute(graph.edge(to, from), 'size', (size: number) => size + 1)
+        continue
+      }
+      graph.addEdge(from, to, {
+        size: isActive ? 2.5 : 1.5,
+        color: dimmed ? '#d9e8dd' : LINK_COLOR,
+      })
     }
 
     if (graph.order > 0) {
@@ -203,39 +246,45 @@ function GraphLoader({
       })
     }
     loadGraph(graph)
-  }, [filteredNodes, significantKeywords, selectedItem, loadGraph])
+  }, [data.nodes, docs, links, showKeywords, filteredNodes, significantKeywords, selectedItem, loadGraph])
 
+  // One call: registerEvents replaces every handler registered before it
   useEffect(() => {
     registerEvents({
       clickNode: (event) => {
         const nodeId = event.node
-        if (nodeId.startsWith('kw:')) {
-          onSelect({ type: 'keyword', keyword: nodeId.slice(3) })
-        } else {
-          const contentNode = data.nodes.find(n => n.id === parseInt(nodeId))
-          if (contentNode) onSelect({ type: 'content', node: contentNode })
-        }
+        if (nodeId.startsWith('kw:')) onSelect({ type: 'keyword', keyword: nodeId.slice(3) })
+        else if (nodeId.startsWith('doc:')) onSelect({ type: 'doc', key: nodeId.slice(4) })
       },
       clickStage: () => onSelect(null),
-    })
-  }, [registerEvents, data.nodes, onSelect])
-
-  useEffect(() => {
-    registerEvents({
       enterNode: () => { const c = sigma.getContainer(); if (c) c.style.cursor = 'pointer' },
       leaveNode: () => { const c = sigma.getContainer(); if (c) c.style.cursor = 'default' },
     })
-  }, [registerEvents, sigma])
+  }, [registerEvents, onSelect, sigma])
 
   return null
 }
 
+function DocButton({ doc, onClick }: { doc: Doc; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="text-left p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: TYPE_COLORS[doc.sourceType] }} />
+        <span className="text-[11px] text-gray-400">{TYPE_LABELS[doc.sourceType]}</span>
+      </div>
+      <p className="text-[12px] text-gray-700 leading-snug line-clamp-2">{doc.title}</p>
+    </button>
+  )
+}
+
 export default function GraphView() {
-  const [data, setData] = useState<GraphData>({ nodes: [], edges: [] })
+  const [data, setData] = useState<GraphData>({ nodes: [], edges: [], docs: [], links: [] })
   const [loading, setLoading] = useState(true)
   const [rebuilding, setRebuilding] = useState(false)
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null)
   const [filters, setFilters] = useState<Record<string, boolean>>({ diary: true, weekly: true, article: true, note: true })
+  const [showKeywords, setShowKeywords] = useState(true)
+  const [showLinks, setShowLinks] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [rebuildResult, setRebuildResult] = useState<string | null>(null)
 
@@ -280,50 +329,62 @@ export default function GraphView() {
     [data, filters, searchTerm],
   )
 
+  // Every document known to either index, keyed by `${type}:${id}`
+  const docs = useMemo(() => {
+    const map = new Map<string, Doc>()
+    for (const n of data.nodes) {
+      const key = docKeyOf(n.sourceType, n.sourceId)
+      map.set(key, { key, sourceType: n.sourceType, sourceId: n.sourceId, title: n.title, href: n.href, snippet: n.snippet, contentNodeId: n.id })
+    }
+    for (const d of data.docs) {
+      const known = map.get(d.key)
+      // The link index has current titles; keep the keyword node's snippet
+      map.set(d.key, known ? { ...known, title: d.title, href: d.href } : { ...d })
+    }
+    return map
+  }, [data])
+
+  const visibleLinks = useMemo(() => {
+    if (!showLinks) return []
+    const term = searchTerm.toLowerCase()
+    const visible = (key: string) => {
+      const doc = docs.get(key)
+      return !!doc && filters[doc.sourceType] !== false && (!term || doc.title.toLowerCase().includes(term))
+    }
+    return data.links.filter(l => visible(l.from) && visible(l.to))
+  }, [data.links, docs, filters, searchTerm, showLinks])
+
   // Sidebar content based on selection
   const sidebarContent = useMemo(() => {
     if (!selectedItem) return null
 
     if (selectedItem.type === 'keyword') {
       const refs = significantKeywords.get(selectedItem.keyword) || []
-      const relatedNodes = refs
+      const relatedDocs = refs
         .map(r => {
           const node = data.nodes.find(n => n.id === r.nodeId)
-          return node ? { ...node, weight: r.weight } : null
+          const doc = node && docs.get(docKeyOf(node.sourceType, node.sourceId))
+          return doc ? { doc, weight: r.weight } : null
         })
-        .filter((n): n is GraphNode & { weight: number } => n !== null)
+        .filter((x): x is { doc: Doc; weight: number } => x !== null)
         .sort((a, b) => b.weight - a.weight)
-
-      return {
-        title: selectedItem.keyword,
-        subtitle: '关键词',
-        color: KEYWORD_COLOR,
-        items: relatedNodes,
-        isKeyword: true,
-      }
+      return { kind: 'keyword' as const, title: selectedItem.keyword, relatedDocs }
     }
 
-    // Content node selected - show connected keywords
-    const node = selectedItem.node
+    const doc = docs.get(selectedItem.key)
+    if (!doc) return null
     const connectedKeywords: { keyword: string; weight: number; refCount: number }[] = []
-    for (const [kw, refs] of Array.from(significantKeywords.entries())) {
-      const ref = refs.find(r => r.nodeId === node.id)
-      if (ref) {
-        connectedKeywords.push({ keyword: kw, weight: ref.weight, refCount: refs.length })
+    if (doc.contentNodeId !== undefined) {
+      for (const [kw, refs] of Array.from(significantKeywords.entries())) {
+        const ref = refs.find(r => r.nodeId === doc.contentNodeId)
+        if (ref) connectedKeywords.push({ keyword: kw, weight: ref.weight, refCount: refs.length })
       }
+      connectedKeywords.sort((a, b) => b.weight - a.weight)
     }
-    connectedKeywords.sort((a, b) => b.weight - a.weight)
-
-    return {
-      title: node.title,
-      subtitle: TYPE_LABELS[node.sourceType],
-      color: TYPE_COLORS[node.sourceType],
-      snippet: node.snippet,
-      link: TYPE_LINKS[node.sourceType]?.(node.sourceId),
-      keywords: connectedKeywords,
-      isKeyword: false,
-    }
-  }, [selectedItem, significantKeywords, data.nodes])
+    const outgoing = data.links.filter(l => l.from === doc.key).map(l => docs.get(l.to)).filter((d): d is Doc => !!d)
+    const incoming = data.links.filter(l => l.to === doc.key).map(l => docs.get(l.from)).filter((d): d is Doc => !!d)
+    return { kind: 'doc' as const, doc, connectedKeywords, outgoing, incoming }
+  }, [selectedItem, significantKeywords, data.nodes, data.links, docs])
 
   const toggleFilter = (type: string) => setFilters(prev => ({ ...prev, [type]: !prev[type] }))
 
@@ -331,23 +392,35 @@ export default function GraphView() {
     return <div className="flex items-center justify-center h-screen"><div className="text-gray-400 text-sm">加载图谱...</div></div>
   }
 
+  const chip = (on: boolean) =>
+    `flex items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-full border transition-colors ${on ? 'border-gray-200 bg-white text-gray-700' : 'border-transparent bg-gray-50 text-gray-300'}`
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white flex-shrink-0">
         <div className="flex gap-1.5">
           {Object.entries(TYPE_LABELS).map(([type, label]) => (
-            <button key={type} onClick={() => toggleFilter(type)}
-              className={`flex items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-full border transition-colors ${filters[type] ? 'border-gray-200 bg-white text-gray-700' : 'border-transparent bg-gray-50 text-gray-300'}`}>
+            <button key={type} onClick={() => toggleFilter(type)} className={chip(filters[type])}>
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: filters[type] ? TYPE_COLORS[type] : '#d1d5db' }} />
               {label}
             </button>
           ))}
         </div>
+        <div className="flex gap-1.5">
+          <button onClick={() => setShowKeywords(v => !v)} className={chip(showKeywords)} title="AI 关键词聚类（重建图谱后生成）">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: showKeywords ? KEYWORD_COLOR : '#d1d5db' }} />
+            关键词
+          </button>
+          <button onClick={() => setShowLinks(v => !v)} className={chip(showLinks)} title="笔记之间的 [[双链]]，实时生成">
+            <span className="w-3 h-0.5 rounded" style={{ backgroundColor: showLinks ? LINK_COLOR : '#d1d5db' }} />
+            双链
+          </button>
+        </div>
         <input type="text" placeholder="搜索..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
           className="text-[12px] border border-gray-200 rounded-lg px-3 py-1.5 w-48 focus:outline-none focus:border-gray-300" />
         <div className="flex-1" />
         <span className="text-[11px] text-gray-400">
-          {significantKeywords.size} 关键词 / {data.nodes.length} 内容
+          {significantKeywords.size} 关键词 · {data.nodes.length} 内容 · {data.links.length} 条双链
         </span>
         <button onClick={handleRebuild} disabled={rebuilding}
           className={`text-[12px] px-3 py-1 rounded border transition-colors ${rebuilding ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}>
@@ -362,10 +435,10 @@ export default function GraphView() {
       )}
       <div className="flex flex-1 min-h-0">
         <div className="flex-1 relative bg-gray-50">
-          {data.nodes.length === 0 ? (
+          {data.nodes.length === 0 && data.links.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <p className="text-sm mb-2">图谱为空</p>
-              <p className="text-[12px]">点击「重建图谱」生成知识连接</p>
+              <p className="text-[12px]">点击「重建图谱」生成关键词连接，或在笔记中用 [[ 链接其他笔记</p>
             </div>
           ) : (
             <SigmaContainer style={{ width: '100%', height: '100%' }} settings={{
@@ -373,7 +446,16 @@ export default function GraphView() {
               labelFont: 'Inter, system-ui, sans-serif', labelWeight: '500',
               labelColor: { color: '#1e293b' }, renderLabels: true, labelRenderedSizeThreshold: 6, enableEdgeEvents: false,
             }}>
-              <GraphLoader data={data} filters={filters} searchTerm={searchTerm} onSelect={handleSelect} selectedItem={selectedItem} />
+              <GraphLoader
+                data={data}
+                docs={docs}
+                links={visibleLinks}
+                showKeywords={showKeywords}
+                filters={filters}
+                searchTerm={searchTerm}
+                onSelect={handleSelect}
+                selectedItem={selectedItem}
+              />
             </SigmaContainer>
           )}
         </div>
@@ -382,45 +464,72 @@ export default function GraphView() {
             <div className="p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: sidebarContent.color }} />
-                  <span className="text-[11px] text-gray-400">{sidebarContent.subtitle}</span>
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: sidebarContent.kind === 'keyword' ? KEYWORD_COLOR : TYPE_COLORS[sidebarContent.doc.sourceType] }}
+                  />
+                  <span className="text-[11px] text-gray-400">
+                    {sidebarContent.kind === 'keyword' ? '关键词' : TYPE_LABELS[sidebarContent.doc.sourceType]}
+                  </span>
                 </div>
                 <button onClick={() => setSelectedItem(null)} className="text-gray-300 hover:text-gray-500 text-sm">x</button>
               </div>
-              <h3 className="text-[15px] font-medium text-gray-800 mb-3 leading-snug">{sidebarContent.title}</h3>
+              <h3 className="text-[15px] font-medium text-gray-800 mb-3 leading-snug">
+                {sidebarContent.kind === 'keyword' ? sidebarContent.title : sidebarContent.doc.title}
+              </h3>
 
-              {sidebarContent.isKeyword && sidebarContent.items && (
+              {sidebarContent.kind === 'keyword' && (
                 <div>
-                  <h4 className="text-[12px] font-medium text-gray-600 mb-2">关联内容 ({sidebarContent.items.length})</h4>
+                  <h4 className="text-[12px] font-medium text-gray-600 mb-2">关联内容 ({sidebarContent.relatedDocs.length})</h4>
                   <div className="flex flex-col gap-2">
-                    {sidebarContent.items.map((node: GraphNode & { weight: number }) => (
-                      <button key={node.id} onClick={() => setSelectedItem({ type: 'content', node })}
+                    {sidebarContent.relatedDocs.map(({ doc, weight }) => (
+                      <button key={doc.key} onClick={() => setSelectedItem({ type: 'doc', key: doc.key })}
                         className="text-left p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: TYPE_COLORS[node.sourceType] }} />
-                          <span className="text-[11px] text-gray-400">{TYPE_LABELS[node.sourceType]}</span>
-                          <span className="text-[10px] text-gray-300 ml-auto">{(node.weight * 100).toFixed(0)}%</span>
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: TYPE_COLORS[doc.sourceType] }} />
+                          <span className="text-[11px] text-gray-400">{TYPE_LABELS[doc.sourceType]}</span>
+                          <span className="text-[10px] text-gray-300 ml-auto">{(weight * 100).toFixed(0)}%</span>
                         </div>
-                        <p className="text-[12px] text-gray-700 leading-snug line-clamp-2">{node.title}</p>
+                        <p className="text-[12px] text-gray-700 leading-snug line-clamp-2">{doc.title}</p>
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
-              {!sidebarContent.isKeyword && (
+              {sidebarContent.kind === 'doc' && (
                 <>
-                  {'snippet' in sidebarContent && sidebarContent.snippet && (
-                    <p className="text-[12px] text-gray-500 leading-relaxed mb-4">{sidebarContent.snippet}</p>
+                  {sidebarContent.doc.snippet && (
+                    <p className="text-[12px] text-gray-500 leading-relaxed mb-4">{sidebarContent.doc.snippet}</p>
                   )}
-                  {'link' in sidebarContent && sidebarContent.link && (
-                    <a href={sidebarContent.link} className="inline-block text-[12px] text-blue-500 hover:text-blue-600 mb-4">查看原文 &rarr;</a>
+                  <a href={sidebarContent.doc.href} className="inline-block text-[12px] text-blue-500 hover:text-blue-600 mb-4">查看原文 &rarr;</a>
+
+                  {(sidebarContent.outgoing.length > 0 || sidebarContent.incoming.length > 0) && (
+                    <div className="mb-4 space-y-3">
+                      {sidebarContent.outgoing.length > 0 && (
+                        <div>
+                          <h4 className="text-[12px] font-medium text-gray-600 mb-2">链接到 ({sidebarContent.outgoing.length})</h4>
+                          <div className="flex flex-col gap-2">
+                            {sidebarContent.outgoing.map(d => <DocButton key={d.key} doc={d} onClick={() => setSelectedItem({ type: 'doc', key: d.key })} />)}
+                          </div>
+                        </div>
+                      )}
+                      {sidebarContent.incoming.length > 0 && (
+                        <div>
+                          <h4 className="text-[12px] font-medium text-gray-600 mb-2">被链接 ({sidebarContent.incoming.length})</h4>
+                          <div className="flex flex-col gap-2">
+                            {sidebarContent.incoming.map(d => <DocButton key={d.key} doc={d} onClick={() => setSelectedItem({ type: 'doc', key: d.key })} />)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
-                  {'keywords' in sidebarContent && sidebarContent.keywords && sidebarContent.keywords.length > 0 && (
+
+                  {sidebarContent.connectedKeywords.length > 0 && (
                     <div>
-                      <h4 className="text-[12px] font-medium text-gray-600 mb-2">关联关键词 ({sidebarContent.keywords.length})</h4>
+                      <h4 className="text-[12px] font-medium text-gray-600 mb-2">关联关键词 ({sidebarContent.connectedKeywords.length})</h4>
                       <div className="flex flex-wrap gap-1.5">
-                        {sidebarContent.keywords.map((kw: { keyword: string; weight: number; refCount: number }) => (
+                        {sidebarContent.connectedKeywords.map(kw => (
                           <button key={kw.keyword} onClick={() => setSelectedItem({ type: 'keyword', keyword: kw.keyword })}
                             className="text-[11px] px-2 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
                             {kw.keyword}
