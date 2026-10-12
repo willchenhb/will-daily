@@ -46,5 +46,6 @@ export function internalHref(target: EventTarget | null): string | null {
   const tag = target.closest('span[data-type="tag"]')
   if (tag) return tagHref(tag.getAttribute('data-tag') || '')
   const href = target.closest('a')?.getAttribute('href')
-  return href && href.startsWith('/') && !href.startsWith('//') ? href : null
+  // Same-origin paths only: "//host" and "/\host" are protocol-relative to browsers
+  return href && /^\/(?![/\\])/.test(href) ? href : null
 }

@@ -8,12 +8,13 @@ export default function Backlinks({ noteId, title }: { noteId: number; title: st
   const [data, setData] = useState<{ links: ContentResult[]; mentions: ContentResult[] } | null>(null)
   const [showMentions, setShowMentions] = useState(false)
 
+  // Refetch after a rename is saved: unlinked mentions are matched by title
   useEffect(() => {
     fetch(`/api/notes/${noteId}/backlinks`)
       .then(res => (res.ok ? res.json() : null))
       .then(setData)
       .catch(() => {})
-  }, [noteId])
+  }, [noteId, title])
 
   if (!data) return null
 
