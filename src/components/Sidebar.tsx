@@ -3,12 +3,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { OPEN_SEARCH_EVENT } from './SearchPalette'
+
+const openSearch = () => window.dispatchEvent(new Event(OPEN_SEARCH_EVENT))
 
 const navItems = [
   { href: '/digest', icon: '📰', label: '导读' },
   { href: '/diary', icon: '📓', label: '日记' },
   { href: '/weekly', icon: '📋', label: '周记' },
   { href: '/notes', icon: '📝', label: '笔记' },
+  { href: '/tags', icon: '🏷️', label: '标签' },
   { href: '/curated', icon: '⭐', label: '精选' },
   { href: '/materials', icon: '📁', label: '资料' },
   { href: '/graph', icon: '🕸️', label: '图谱' },
@@ -110,6 +114,13 @@ export default function Sidebar() {
           </button>
           <span className="text-xl">🎋</span>
           <span className="text-[17px] font-semibold text-gray-800 ml-2">Will Daily</span>
+          <button
+            onClick={openSearch}
+            className="ml-auto text-gray-400 text-lg"
+            aria-label="搜索"
+          >
+            🔍
+          </button>
         </div>
 
         {/* Overlay */}
@@ -213,6 +224,22 @@ export default function Sidebar() {
         {!collapsed && (
           <span className="text-[17px] font-semibold text-gray-800">Will Daily</span>
         )}
+      </div>
+
+      <div className="px-2 mb-1">
+        <button
+          onClick={openSearch}
+          title="搜索 (⌘K)"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-gray-400 border border-gray-100 hover:bg-gray-50 transition-colors"
+        >
+          <span className="text-[13px]">🔍</span>
+          {!collapsed && (
+            <>
+              <span>搜索</span>
+              <kbd className="ml-auto text-[10px] text-gray-300">⌘K</kbd>
+            </>
+          )}
+        </button>
       </div>
 
       <nav className="flex-1 flex flex-col gap-1 px-2">

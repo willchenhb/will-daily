@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
+import SearchPalette from '@/components/SearchPalette'
 
 export const metadata: Metadata = {
   title: 'Will Daily',
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body className="font-sans sidebar-expanded">
         <Sidebar />
+        <SearchPalette />
         <main className="main-content min-h-screen bg-white transition-all duration-200 flex flex-col">
           <div className="flex-1">{children}</div>
           <footer className="py-4 text-center text-[11px] text-gray-400 border-t border-gray-50">
