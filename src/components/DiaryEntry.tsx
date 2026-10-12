@@ -21,6 +21,8 @@ interface DiaryEntryProps {
   content: string
   updatedAt?: string
   isToday?: boolean
+  // Open in the editor (a not-yet-saved entry); defaults to a new entry for today
+  defaultEditing?: boolean
   // Persists the entry; rejects on failure (ConflictError on an edit conflict)
   onSave: (data: { id?: number; date: string; content: string } & SaveFlags) => Promise<SavedEntry>
   // Editing finished, e.g. to refresh the list
@@ -31,10 +33,10 @@ interface DiaryEntryProps {
 // Autosave compares this form, so an editor emptied back to "<p></p>" counts as unchanged
 const normalize = (html: string) => (isEmptyHtml(html) ? '' : html)
 
-export default function DiaryEntry({ id, date, dateFormatted, content: initialContent, updatedAt, isToday, onSave, onDone, onDelete }: DiaryEntryProps) {
+export default function DiaryEntry({ id, date, dateFormatted, content: initialContent, updatedAt, isToday, defaultEditing, onSave, onDone, onDelete }: DiaryEntryProps) {
   const router = useRouter()
   const [content, setContent] = useState(initialContent)
-  const [editing, setEditing] = useState(isToday && !id)
+  const [editing, setEditing] = useState(defaultEditing ?? (isToday && !id))
   const [showHistory, setShowHistory] = useState(false)
   // Bumped to remount the editor with new content (restore, reload after conflict)
   const [editorKey, setEditorKey] = useState(0)
@@ -83,6 +85,8 @@ export default function DiaryEntry({ id, date, dateFormatted, content: initialCo
       if (idRef.current) alert('日记内容为空。如需删除，请点击"删除"')
       return
     }
+    // A new entry still showing just the template: nothing to save yet
+    if (!idRef.current && normalize(content) === normalize(initialContent)) return
     if (blockSaveForPendingImages(content)) return
     if (!(await flush())) return
     setEditing(false)

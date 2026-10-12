@@ -1,14 +1,19 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import DiaryEntry, { type SavedEntry } from '@/components/DiaryEntry'
 import Toast from '@/components/Toast'
 import Loading from '@/components/Loading'
+import DiaryCalendar from '@/components/DiaryCalendar'
 import { getToday, formatDate } from '@/lib/dates'
 import { internalHref } from '@/lib/wiki'
 import { saveDoc, type SaveFlags } from '@/lib/save-doc'
+import { applyDiaryTemplate } from '@/lib/diary-template'
+
+const PAGE_SIZE = 20
+const API_MAX_SIZE = 100
 
 interface Entry {
   id: number
@@ -27,25 +32,61 @@ export default function DiaryPage() {
 }
 
 function DiaryList() {
-  // ?date=YYYY-MM-DD (from search) shows just that day
+  // ?date=YYYY-MM-DD (from search or the calendar) shows just that day
   const dateFilter = useSearchParams().get('date')
   const router = useRouter()
   const [entries, setEntries] = useState<Entry[]>([])
+  const [total, setTotal] = useState(0)
+  const [limit, setLimit] = useState(PAGE_SIZE) // entries loaded so far ("加载更多" adds a page)
+  const [template, setTemplate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showCalendar, setShowCalendar] = useState(false)
+  const calendarRef = useRef<HTMLDivElement>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const today = getToday()
-  const todayDiaryExists = entries.some(e => e.date === today && (!e.type || e.type === 'diary'))
+  const newEntryDate = dateFilter || today
+  const hasDiaryFor = (date: string) => entries.some(e => e.date === date && (!e.type || e.type === 'diary'))
 
+  // Reloads everything shown so far, so finishing an edit keeps older pages
   const fetchEntries = useCallback(async () => {
-    const res = await fetch(dateFilter ? `/api/diary?from=${dateFilter}&to=${dateFilter}` : '/api/diary')
-    if (res.ok) {
-      const data = await res.json()
-      setEntries(data.entries)
+    if (dateFilter) {
+      const res = await fetch(`/api/diary?from=${dateFilter}&to=${dateFilter}`)
+      if (res.ok) setEntries((await res.json()).entries)
+    } else {
+      const loaded: Entry[] = []
+      let count = 0
+      for (let page = 1; page <= Math.ceil(limit / API_MAX_SIZE); page++) {
+        const res = await fetch(`/api/diary?page=${page}&size=${API_MAX_SIZE}`)
+        if (!res.ok) break
+        const data = await res.json()
+        loaded.push(...data.entries)
+        count = data.total
+        if (data.entries.length < API_MAX_SIZE) break
+      }
+      setEntries(loaded.slice(0, limit))
+      setTotal(count)
     }
     setLoading(false)
-  }, [dateFilter])
+  }, [dateFilter, limit])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => (res.ok ? res.json() : {}))
+      .then((data: { diary_template?: string }) => setTemplate(data.diary_template || ''))
+      .catch(() => setTemplate(''))
+  }, [])
+
+  // Close the calendar on outside click
+  useEffect(() => {
+    if (!showCalendar) return
+    const onDown = (e: MouseEvent) => {
+      if (!calendarRef.current?.contains(e.target as Node)) setShowCalendar(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [showCalendar])
 
   // Called by autosave: no toast or refetch, which would remount the entry being edited
   const handleSave = ({ id, date, ...rest }: { id?: number; date: string; content: string } & SaveFlags): Promise<SavedEntry> =>
@@ -64,30 +105,51 @@ function DiaryList() {
     }
   }
 
-  if (loading) return <div className="max-w-3xl mx-auto px-8 py-6"><Loading /></div>
+  // The new-entry editor starts from the template, so wait for it
+  if (loading || template === null) return <div className="max-w-3xl mx-auto px-8 py-6"><Loading /></div>
 
   return (
     <div className="max-w-3xl mx-auto px-8 py-6">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="flex items-baseline justify-between mb-4">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold text-gray-800">日记</h1>
-        {dateFilter && (
-          <Link href="/diary" className="text-[12px] text-gray-400 hover:text-gray-600">← 全部日记</Link>
-        )}
+        <div className="flex items-center gap-3">
+          {dateFilter && (
+            <Link href="/diary" className="text-[12px] text-gray-400 hover:text-gray-600">← 全部日记</Link>
+          )}
+          <div className="relative" ref={calendarRef}>
+            <button
+              onClick={() => setShowCalendar(v => !v)}
+              className="text-[12px] text-gray-500 border border-gray-200 rounded px-2.5 py-1 hover:bg-gray-50"
+            >
+              📅 日历
+            </button>
+            {showCalendar && (
+              <div className="absolute right-0 top-full mt-2 z-30">
+                <DiaryCalendar
+                  selected={dateFilter}
+                  onPick={date => {
+                    setShowCalendar(false)
+                    router.push(date === today ? '/diary' : `/diary?date=${date}`)
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {dateFilter && entries.length === 0 && (
-        <div className="text-[13px] text-gray-400">{formatDate(dateFilter)} 没有日记</div>
-      )}
-
-      {!dateFilter && !todayDiaryExists && (
+      {/* New entry for today, or for the picked day (backfilling) */}
+      {!hasDiaryFor(newEntryDate) && (
         <>
           <DiaryEntry
-            date={today}
-            dateFormatted={formatDate(today)}
-            content=""
-            isToday
+            key={newEntryDate}
+            date={newEntryDate}
+            dateFormatted={formatDate(newEntryDate)}
+            content={applyDiaryTemplate(template, newEntryDate)}
+            isToday={newEntryDate === today}
+            defaultEditing
             onSave={handleSave}
             onDone={fetchEntries}
           />
@@ -132,6 +194,17 @@ function DiaryList() {
           <div className="border-t border-gray-100 mb-6" />
         </div>
       ))}
+
+      {!dateFilter && entries.length < total && (
+        <div className="text-center">
+          <button
+            onClick={() => setLimit(l => l + PAGE_SIZE)}
+            className="text-[12px] text-gray-500 border border-gray-200 rounded px-4 py-1.5 hover:bg-gray-50"
+          >
+            加载更多（还有 {total - entries.length} 篇）
+          </button>
+        </div>
+      )}
     </div>
   )
 }

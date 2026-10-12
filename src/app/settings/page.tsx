@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Toast from '@/components/Toast'
+import Editor from '@/components/Editor'
+import { TEMPLATE_PLACEHOLDERS } from '@/lib/diary-template'
 
 const MODELS = [
   { value: 'kimi-k3', label: 'kimi-k3 (旗舰 · 1M 上下文)' },
@@ -17,6 +19,8 @@ export default function SettingsPage() {
   const [apiKeySet, setApiKeySet] = useState(false)
   const [model, setModel] = useState('kimi-k3')
   const [saving, setSaving] = useState(false)
+  const [template, setTemplate] = useState<string | null>(null)
+  const [savingTemplate, setSavingTemplate] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   const fetchSettings = useCallback(async () => {
@@ -24,6 +28,7 @@ export default function SettingsPage() {
     const data = await res.json()
     setApiKeySet(data.ai_api_key_set === 'true')
     setModel(data.ai_model || 'kimi-k3')
+    setTemplate(prev => prev ?? (data.diary_template || ''))
   }, [])
 
   useEffect(() => { fetchSettings() }, [fetchSettings])
@@ -42,6 +47,22 @@ export default function SettingsPage() {
       setToast({ message: '保存失败', type: 'error' })
     }
     setSaving(false)
+  }
+
+  const handleSaveTemplate = async () => {
+    setSavingTemplate(true)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ diary_template: template && template !== '<p></p>' ? template : '' }),
+      })
+      if (!res.ok) throw new Error()
+      setToast({ message: '日记模板已保存', type: 'success' })
+    } catch {
+      setToast({ message: '保存失败', type: 'error' })
+    }
+    setSavingTemplate(false)
   }
 
   return (
@@ -91,6 +112,29 @@ export default function SettingsPage() {
         >
           {saving ? '保存中...' : '保存设置'}
         </button>
+
+        <div className="border-t border-gray-100 pt-5">
+          <h2 className="text-[14px] font-medium text-gray-700 mb-2">日记模板</h2>
+          <p className="text-[12px] text-gray-400 mb-3 leading-relaxed">
+            新建日记时自动填入，可用「/待办列表」「## 标题」等格式。
+            {TEMPLATE_PLACEHOLDERS.map(p => (
+              <span key={p.key}> <code className="text-[11px] bg-gray-50 px-1 rounded">{p.key}</code> 会替换为{p.label}。</span>
+            ))}
+            留空则不使用模板。
+          </p>
+          {template !== null && (
+            <div className="border border-gray-100 rounded-lg px-3 py-2 mb-3">
+              <Editor content={template} onChange={setTemplate} placeholder="例如：## 今日三件事 …" contentClassName="min-h-[120px]" onSave={handleSaveTemplate} />
+            </div>
+          )}
+          <button
+            onClick={handleSaveTemplate}
+            disabled={savingTemplate}
+            className="text-[13px] text-[#3a7a4f] border border-[#c5d9c5] px-4 py-2 rounded hover:bg-[#f0faf4] disabled:opacity-50"
+          >
+            {savingTemplate ? '保存中...' : '保存模板'}
+          </button>
+        </div>
       </div>
     </div>
   )

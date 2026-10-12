@@ -6,6 +6,7 @@ import { parseBody, badRequest } from '@/lib/api-utils'
 const DEFAULTS: Record<string, string> = {
   ai_model: 'kimi-k3',
   ai_max_tokens: '1024',
+  diary_template: '', // HTML pre-filled into a new diary entry; {{date}} is replaced
 }
 
 export async function GET() {
@@ -34,7 +35,7 @@ export async function PUT(request: NextRequest) {
   const body = await parseBody(request)
   if (!body) return badRequest('Invalid JSON body')
 
-  const allowedKeys = ['ai_model', 'ai_max_tokens']
+  const allowedKeys = ['ai_model', 'ai_max_tokens', 'diary_template']
 
   for (const key of allowedKeys) {
     if (body[key] !== undefined) {
