@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { propagateNoteTitle } from '@/lib/wiki-sync'
+import { normalizeWikiLabels, propagateNoteTitle } from '@/lib/wiki-sync'
+import { conflictResponse, deleteRevisions, snapshotBeforeSave } from '@/lib/revisions'
 import { parseId, parseBody, badRequest, notFound } from '@/lib/api-utils'
 
 export async function GET(
@@ -26,27 +27,25 @@ export async function PUT(
   const body = await parseBody(request)
   if (!body) return badRequest('Invalid JSON body')
 
-  try {
-    const previous = body.title !== undefined
-      ? await prisma.note.findUnique({ where: { id }, select: { title: true } })
-      : null
-    const note = await prisma.note.update({
-      where: { id },
-      data: {
-        ...(body.title !== undefined && { title: body.title as string }),
-        ...(body.content !== undefined && { content: body.content as string }),
-        ...(body.category !== undefined && { category: body.category ? (body.category as string).trim().toLowerCase() : null }),
-        ...(body.summary !== undefined && { summary: body.summary as string }),
-      },
-    })
-    if (previous && previous.title !== note.title) await propagateNoteTitle(id, note.title)
-    return NextResponse.json(note)
-  } catch (e: unknown) {
-    if (e && typeof e === 'object' && 'code' in e && e.code === 'P2025') {
-      return notFound('Note not found')
-    }
-    throw e
-  }
+  const current = await prisma.note.findUnique({ where: { id } })
+  if (!current) return notFound('Note not found')
+  const conflict = conflictResponse(current, body)
+  if (conflict) return conflict
+
+  const content = typeof body.content === 'string' ? await normalizeWikiLabels(body.content) : undefined
+  await snapshotBeforeSave('note', id, current, content, body)
+
+  const note = await prisma.note.update({
+    where: { id },
+    data: {
+      ...(body.title !== undefined && { title: body.title as string }),
+      ...(content !== undefined && { content }),
+      ...(body.category !== undefined && { category: body.category ? (body.category as string).trim().toLowerCase() : null }),
+      ...(body.summary !== undefined && { summary: body.summary as string }),
+    },
+  })
+  if (current.title !== note.title) await propagateNoteTitle(id, note.title)
+  return NextResponse.json(note)
 }
 
 export async function DELETE(
@@ -58,6 +57,7 @@ export async function DELETE(
 
   try {
     await prisma.note.delete({ where: { id } })
+    await deleteRevisions('note', id)
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {
     if (e && typeof e === 'object' && 'code' in e && e.code === 'P2025') {

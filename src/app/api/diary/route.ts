@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { parseBody, badRequest } from '@/lib/api-utils'
+import { normalizeWikiLabels } from '@/lib/wiki-sync'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
   }
 
   const entry = await prisma.diaryEntry.create({
-    data: { date, content },
+    data: { date, content: await normalizeWikiLabels(content) },
   })
 
   return NextResponse.json(entry, { status: 201 })

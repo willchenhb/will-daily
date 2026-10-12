@@ -118,6 +118,10 @@ const tables = [
   \`CREATE TABLE IF NOT EXISTS Upload (
     id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT NOT NULL UNIQUE,
     mime TEXT NOT NULL, size INTEGER NOT NULL, data BLOB NOT NULL,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)\`,
+  \`CREATE TABLE IF NOT EXISTS Revision (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, sourceType TEXT NOT NULL,
+    sourceId INTEGER NOT NULL, title TEXT, content TEXT NOT NULL,
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)\`
 ];
 
@@ -163,6 +167,7 @@ const indexes = [
   'CREATE INDEX IF NOT EXISTS idx_risk_owner ON ProjectRisk(ownerId)',
   'CREATE INDEX IF NOT EXISTS idx_todo_milestone ON TodoItem(milestoneId)',
   'CREATE INDEX IF NOT EXISTS idx_material_created ON Material(createdAt)',
+  'CREATE INDEX IF NOT EXISTS idx_revision_source ON Revision(sourceType, sourceId, createdAt)',
 ];
 for (const sql of indexes) db.exec(sql);
 

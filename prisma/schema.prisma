@@ -238,3 +238,15 @@ model Upload {
   data      Bytes
   createdAt DateTime @default(now())
 }
+
+// Earlier versions of a note / diary entry / weekly plan, kept by autosave
+model Revision {
+  id         Int      @id @default(autoincrement())
+  sourceType String   // note | diary | weekly
+  sourceId   Int
+  title      String?
+  content    String
+  createdAt  DateTime @default(now())
+
+  @@index([sourceType, sourceId, createdAt], map: "idx_revision_source")
+}

@@ -26,10 +26,9 @@ export async function POST(request: NextRequest) {
   try {
     const summary = await generateSummary(note.content)
 
-    await prisma.note.update({
-      where: { id: noteId },
-      data: { summary },
-    })
+    // Raw SQL so updatedAt stays put: a summary is not an edit, and bumping it would make
+    // the open note's next autosave look like an edit conflict
+    await prisma.$executeRaw`UPDATE Note SET summary = ${summary} WHERE id = ${noteId}`
 
     return NextResponse.json({ summary })
   } catch (e) {

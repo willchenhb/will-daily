@@ -5,10 +5,15 @@ import { useRouter } from 'next/navigation'
 import TodoItem from './TodoItem'
 import Editor from './Editor'
 import SaveStatus from './SaveStatus'
+import ConflictNotice from './ConflictNotice'
+import RevisionHistory from './RevisionHistory'
 import { blockSaveForPendingImages, hasPendingImages } from '@/lib/editor-images'
 import { useAutosave } from '@/lib/use-autosave'
 import { isEmptyHtml } from '@/lib/html'
 import { internalHref } from '@/lib/wiki'
+import { keepInHistory, type SaveFlags } from '@/lib/save-doc'
+
+export interface SavedPlan { id: number; content: string | null; updatedAt: string }
 
 interface Todo {
   id: number
@@ -23,19 +28,24 @@ interface WeeklyPlanProps {
   weekStart: string
   weekLabel: string
   content: string
+  updatedAt?: string
   todos: Todo[]
   isCurrent?: boolean
   isNext?: boolean
-  // Creates or updates the plan and resolves to its id; rejects on failure
-  onSave: (data: { id?: number; weekStart: string; content?: string }) => Promise<number>
+  // Creates or updates the plan; rejects on failure (ConflictError on an edit conflict)
+  onSave: (data: { id?: number; weekStart: string; content?: string } & SaveFlags) => Promise<SavedPlan>
   onRefresh: () => void
 }
+
+// Autosave compares this form, so an editor emptied back to "<p></p>" counts as unchanged
+const normalize = (html: string) => (isEmptyHtml(html) ? '' : html)
 
 export default function WeeklyPlan({
   id,
   weekStart,
   weekLabel,
   content: initialContent,
+  updatedAt,
   todos,
   isCurrent,
   isNext,
@@ -46,14 +56,48 @@ export default function WeeklyPlan({
   const [content, setContent] = useState(initialContent || '')
   const [editingContent, setEditingContent] = useState(false)
   const [newTodo, setNewTodo] = useState('')
+  const [showHistory, setShowHistory] = useState(false)
+  // Bumped to remount the editor with new content (restore, reload after conflict)
+  const [editorKey, setEditorKey] = useState(0)
   // A placeholder week gets its id from the first save
   const planIdRef = useRef(id)
+  // Version being edited (server updatedAt), and flags for the next save
+  const versionRef = useRef(updatedAt ?? null)
+  const nextSaveFlags = useRef<SaveFlags>({})
 
-  const { status, flush } = useAutosave({
-    value: isEmptyHtml(content) ? '' : content,
-    save: async html => { planIdRef.current = await onSave({ id: planIdRef.current, weekStart, content: html }) },
+  const remember = (saved: SavedPlan) => {
+    planIdRef.current = saved.id
+    versionRef.current = saved.updatedAt
+  }
+
+  const { status, flush, conflict, reset, retry } = useAutosave({
+    value: normalize(content),
+    save: async html => {
+      remember(await onSave({ id: planIdRef.current, weekStart, content: html, baseUpdatedAt: versionRef.current, ...nextSaveFlags.current }))
+      nextSaveFlags.current = {}
+    },
     canSave: html => !hasPendingImages(html),
   })
+
+  const loadLatest = () => {
+    if (planIdRef.current) keepInHistory('weekly', planIdRef.current, content)
+    const latest = conflict as SavedPlan
+    setContent(latest.content || '')
+    versionRef.current = latest.updatedAt
+    reset(normalize(latest.content || ''))
+    setEditorKey(k => k + 1)
+  }
+
+  const overwrite = () => {
+    nextSaveFlags.current = { force: true }
+    retry()
+  }
+
+  const restoreRevision = (revision: { content: string }) => {
+    nextSaveFlags.current = { snapshot: true }
+    setContent(revision.content)
+    setEditorKey(k => k + 1)
+  }
 
   const handleDone = async () => {
     if (blockSaveForPendingImages(content)) return
@@ -67,7 +111,9 @@ export default function WeeklyPlan({
     let planId = planIdRef.current
     if (!planId) {
       try {
-        planId = planIdRef.current = await onSave({ weekStart })
+        const saved = await onSave({ weekStart })
+        remember(saved)
+        planId = saved.id
       } catch {
         alert('创建周记失败')
         return
@@ -84,21 +130,33 @@ export default function WeeklyPlan({
   }
 
   return (
-    <div className="mb-8">
+    <div className="mb-8 group">
       <div className="flex items-center justify-between mb-4">
         <span className="text-[15px] font-semibold text-gray-700">{weekLabel}</span>
-        {isCurrent && (
-          <span className="text-[10px] text-white bg-[#3a7a4f] px-2 py-0.5 rounded">本周</span>
-        )}
-        {isNext && (
-          <span className="text-[10px] text-[#3a7a4f] border border-[#c5d9c5] px-2 py-0.5 rounded">下周</span>
-        )}
+        <div className="flex items-center gap-2">
+          {planIdRef.current && (
+            <button
+              onClick={() => setShowHistory(true)}
+              className="text-[11px] text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              历史
+            </button>
+          )}
+          {isCurrent && (
+            <span className="text-[10px] text-white bg-[#3a7a4f] px-2 py-0.5 rounded">本周</span>
+          )}
+          {isNext && (
+            <span className="text-[10px] text-[#3a7a4f] border border-[#c5d9c5] px-2 py-0.5 rounded">下周</span>
+          )}
+        </div>
       </div>
+
+      {conflict !== null && <ConflictNotice onReload={loadLatest} onOverwrite={overwrite} />}
 
       <div className="mb-4">
         {editingContent ? (
           <div>
-            <Editor content={content} onChange={setContent} placeholder="本周总结和思考..." onSave={() => { flush() }} />
+            <Editor key={editorKey} content={content} onChange={setContent} placeholder="本周总结和思考..." onSave={() => { flush() }} />
             <div className="flex gap-3 mt-2 justify-end items-center">
               <SaveStatus status={status} />
               <button onClick={handleDone} disabled={status === 'saving'} className="text-xs text-white bg-[#3a7a4f] hover:bg-[#2d6b3f] px-3 py-1.5 rounded disabled:opacity-50">
@@ -160,6 +218,9 @@ export default function WeeklyPlan({
             <button onClick={handleAddTodo} className="text-xs text-[#3a7a4f]">添加</button>
           )}
         </div>
+      )}
+      {showHistory && planIdRef.current && (
+        <RevisionHistory type="weekly" id={planIdRef.current} onRestore={restoreRevision} onClose={() => setShowHistory(false)} />
       )}
     </div>
   )

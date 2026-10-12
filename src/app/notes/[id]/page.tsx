@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Editor from '@/components/Editor'
 import SaveStatus from '@/components/SaveStatus'
 import Backlinks from '@/components/Backlinks'
+import ConflictNotice from '@/components/ConflictNotice'
+import RevisionHistory from '@/components/RevisionHistory'
 import { hasPendingImages } from '@/lib/editor-images'
 import { useAutosave } from '@/lib/use-autosave'
+import { keepInHistory, saveDoc, type SaveFlags } from '@/lib/save-doc'
 import Toast from '@/components/Toast'
 import Markdown from '@/components/Markdown'
 
@@ -16,6 +19,7 @@ interface NoteDetail {
   content: string
   category: string | null
   summary: string | null
+  updatedAt: string
 }
 
 export default function NoteDetailPage() {
@@ -29,6 +33,14 @@ export default function NoteDetailPage() {
   const [summarizing, setSummarizing] = useState(false)
   const [hasApiKey, setHasApiKey] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  // Title as last saved, so backlinks follow renames
+  const [savedTitle, setSavedTitle] = useState('')
+  // Bumped to remount the editor with new content (restore, reload after conflict)
+  const [editorKey, setEditorKey] = useState(0)
+  // Version being edited (server updatedAt), and flags for the next save
+  const versionRef = useRef<string | null>(null)
+  const nextSaveFlags = useRef<SaveFlags>({})
 
   const fetchNote = useCallback(async () => {
     const res = await fetch(`/api/notes/${id}`)
@@ -38,6 +50,8 @@ export default function NoteDetailPage() {
     setTitle(data.title)
     setContent(data.content)
     setCategory(data.category || '')
+    setSavedTitle(data.title)
+    versionRef.current = data.updatedAt
   }, [id, router])
 
   const fetchCategories = useCallback(async () => {
@@ -58,19 +72,49 @@ export default function NoteDetailPage() {
 
   useEffect(() => { fetchNote(); fetchCategories(); checkApiKey() }, [fetchNote, fetchCategories, checkApiKey])
 
-  const { status, flush } = useAutosave({
+  const { status, flush, conflict, reset, retry } = useAutosave({
     value: { title, content, category },
     enabled: note !== null,
     save: async v => {
-      const res = await fetch(`/api/notes/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: v.title, content: v.content, category: v.category || null }),
+      const saved = await saveDoc<NoteDetail>(`/api/notes/${id}`, {
+        title: v.title,
+        content: v.content,
+        category: v.category || null,
+        baseUpdatedAt: versionRef.current,
+        ...nextSaveFlags.current,
       })
-      if (!res.ok) throw new Error('保存失败')
+      nextSaveFlags.current = {}
+      versionRef.current = saved.updatedAt
+      setSavedTitle(saved.title)
     },
     canSave: v => !hasPendingImages(v.content),
   })
+
+  // Conflict: take the server's version…
+  const loadLatest = () => {
+    keepInHistory('note', Number(id), content, title)
+    const latest = conflict as NoteDetail
+    const fields = { title: latest.title, content: latest.content, category: latest.category || '' }
+    setTitle(fields.title)
+    setContent(fields.content)
+    setCategory(fields.category)
+    setSavedTitle(fields.title)
+    versionRef.current = latest.updatedAt
+    reset(fields)
+    setEditorKey(k => k + 1)
+  }
+
+  // …or overwrite it (the replaced version is kept in history)
+  const overwrite = () => {
+    nextSaveFlags.current = { force: true }
+    retry()
+  }
+
+  const restoreRevision = (revision: { content: string }) => {
+    nextSaveFlags.current = { snapshot: true }
+    setContent(revision.content)
+    setEditorKey(k => k + 1)
+  }
 
   const handleBack = async () => {
     await flush()
@@ -147,8 +191,10 @@ export default function NoteDetailPage() {
         </datalist>
       </div>
 
+      {conflict !== null && <ConflictNotice onReload={loadLatest} onOverwrite={overwrite} />}
+
       <div className="border border-gray-100 rounded-lg px-3 py-2">
-        <Editor content={content} onChange={setContent} placeholder="开始写笔记，输入 / 插入内容..." onSave={() => { flush() }} contentClassName="min-h-[300px]" />
+        <Editor key={editorKey} content={content} onChange={setContent} placeholder="开始写笔记，输入 / 插入内容..." onSave={() => { flush() }} contentClassName="min-h-[300px]" />
       </div>
 
       <div className="flex justify-between items-center mt-4">
@@ -163,6 +209,12 @@ export default function NoteDetailPage() {
             </button>
           )}
           <button
+            onClick={() => setShowHistory(true)}
+            className="text-xs text-gray-400 hover:text-gray-600 px-3 py-1.5"
+          >
+            历史版本
+          </button>
+          <button
             onClick={handleDelete}
             className="text-xs text-red-400 hover:text-red-600 px-3 py-1.5"
           >
@@ -172,7 +224,11 @@ export default function NoteDetailPage() {
         <SaveStatus status={status} />
       </div>
 
-      <Backlinks noteId={note.id} title={note.title} />
+      <Backlinks noteId={note.id} title={savedTitle} />
+
+      {showHistory && (
+        <RevisionHistory type="note" id={note.id} onRestore={restoreRevision} onClose={() => setShowHistory(false)} />
+      )}
     </div>
   )
 }

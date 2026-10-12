@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { parseId, parseBody, badRequest, notFound } from '@/lib/api-utils'
+import { normalizeWikiLabels } from '@/lib/wiki-sync'
+import { conflictResponse, deleteRevisions, snapshotBeforeSave } from '@/lib/revisions'
 
 export async function PUT(
   request: NextRequest,
@@ -13,22 +15,23 @@ export async function PUT(
   const body = await parseBody(request)
   if (!body) return badRequest('Invalid JSON body')
 
-  try {
-    const plan = await prisma.weeklyPlan.update({
-      where: { id },
-      data: {
-        ...(body.title !== undefined && { title: body.title as string }),
-        ...(body.content !== undefined && { content: body.content as string }),
-      },
-      include: { todos: { orderBy: { order: 'asc' } } },
-    })
-    return NextResponse.json(plan)
-  } catch (e: unknown) {
-    if (e && typeof e === 'object' && 'code' in e && e.code === 'P2025') {
-      return notFound('Weekly plan not found')
-    }
-    throw e
-  }
+  const current = await prisma.weeklyPlan.findUnique({ where: { id } })
+  if (!current) return notFound('Weekly plan not found')
+  const conflict = conflictResponse(current, body)
+  if (conflict) return conflict
+
+  const content = typeof body.content === 'string' ? await normalizeWikiLabels(body.content) : undefined
+  await snapshotBeforeSave('weekly', id, current, content, body)
+
+  const plan = await prisma.weeklyPlan.update({
+    where: { id },
+    data: {
+      ...(body.title !== undefined && { title: body.title as string }),
+      ...(content !== undefined && { content }),
+    },
+    include: { todos: { orderBy: { order: 'asc' } } },
+  })
+  return NextResponse.json(plan)
 }
 
 export async function DELETE(
@@ -40,6 +43,7 @@ export async function DELETE(
 
   try {
     await prisma.weeklyPlan.delete({ where: { id } })
+    await deleteRevisions('weekly', id)
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {
     if (e && typeof e === 'object' && 'code' in e && e.code === 'P2025') {

@@ -3,17 +3,19 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import DiaryEntry from '@/components/DiaryEntry'
+import DiaryEntry, { type SavedEntry } from '@/components/DiaryEntry'
 import Toast from '@/components/Toast'
 import Loading from '@/components/Loading'
 import { getToday, formatDate } from '@/lib/dates'
 import { internalHref } from '@/lib/wiki'
+import { saveDoc, type SaveFlags } from '@/lib/save-doc'
 
 interface Entry {
   id: number
   date: string
   type?: string
   content: string
+  updatedAt: string
 }
 
 export default function DiaryPage() {
@@ -46,22 +48,10 @@ function DiaryList() {
   useEffect(() => { fetchEntries() }, [fetchEntries])
 
   // Called by autosave: no toast or refetch, which would remount the entry being edited
-  const handleSave = async (data: { id?: number; date: string; content: string }): Promise<number> => {
-    const res = data.id
-      ? await fetch(`/api/diary/${data.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: data.content }),
-        })
-      : await fetch('/api/diary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: data.date, content: data.content }),
-        })
-    if (!res.ok) throw new Error('保存失败')
-    const entry = await res.json()
-    return entry.id
-  }
+  const handleSave = ({ id, date, ...rest }: { id?: number; date: string; content: string } & SaveFlags): Promise<SavedEntry> =>
+    id
+      ? saveDoc<SavedEntry>(`/api/diary/${id}`, rest)
+      : saveDoc<SavedEntry>('/api/diary', { date, content: rest.content }, 'POST')
 
   const handleDelete = async (id: number) => {
     if (!confirm('确定删除这篇日记？')) return
@@ -132,6 +122,7 @@ function DiaryList() {
               date={entry.date}
               dateFormatted={formatDate(entry.date)}
               content={entry.content}
+              updatedAt={entry.updatedAt}
               isToday={entry.date === today}
               onSave={handleSave}
               onDone={fetchEntries}

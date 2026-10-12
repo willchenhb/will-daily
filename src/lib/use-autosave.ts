@@ -3,7 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // idle: nothing edited yet · dirty: waiting for the debounce · saving · saved · error: retrying
-export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+// conflict: the server holds a newer version; autosave pauses until reset() or retry()
+export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict'
+
+// Thrown by `save` when the document changed elsewhere (HTTP 409); carries the server's version
+export class ConflictError<T = unknown> extends Error {
+  constructor(public current: T) {
+    super('conflict')
+  }
+}
 
 interface AutosaveOptions<T> {
   value: T
@@ -30,6 +38,8 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
   latest.current = { value, key, save, canSave }
 
   const [status, setStatus] = useState<SaveStatus>('idle')
+  const [conflict, setConflict] = useState<unknown>(null)
+  const conflictRef = useRef(false)
   const inFlight = useRef<Promise<void> | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const runRef = useRef<() => Promise<boolean>>(async () => true)
@@ -40,18 +50,25 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
     while (inFlight.current) await inFlight.current
     const { value, key, save, canSave } = latest.current
     if (savedKeyRef.current === null || key === savedKeyRef.current) return true
-    if (!canSave(value)) return false
+    if (conflictRef.current || !canSave(value)) return false
 
     let ok = true
+    let failure: unknown = null
     setStatus('saving')
     const attempt = save(value).then(
       () => { savedKeyRef.current = key },
-      () => { ok = false },
+      err => { ok = false; failure = err },
     )
     inFlight.current = attempt
     await attempt
     inFlight.current = null
 
+    if (failure instanceof ConflictError) {
+      conflictRef.current = true
+      setConflict(failure.current)
+      setStatus('conflict')
+      return false
+    }
     if (!ok) {
       setStatus('error')
       timer.current = setTimeout(() => runRef.current(), RETRY_DELAY)
@@ -69,7 +86,7 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
   runRef.current = flush
 
   useEffect(() => {
-    if (!enabled || savedKeyRef.current === null) return
+    if (!enabled || savedKeyRef.current === null || conflictRef.current) return
     if (key === savedKeyRef.current) {
       clearTimeout(timer.current)
       setStatus(s => (s === 'dirty' ? 'saved' : s))
@@ -99,5 +116,21 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
     }
   }, [])
 
-  return { status, flush }
+  // Resolve a conflict by adopting `value` as the saved state (e.g. the server's version)
+  const reset = useCallback((value: T) => {
+    clearTimeout(timer.current)
+    conflictRef.current = false
+    setConflict(null)
+    savedKeyRef.current = JSON.stringify(value)
+    setStatus('saved')
+  }, [])
+
+  // Resolve a conflict by saving again (the caller makes `save` overwrite this time)
+  const retry = useCallback(() => {
+    conflictRef.current = false
+    setConflict(null)
+    return runRef.current()
+  }, [])
+
+  return { status, flush, conflict, reset, retry }
 }

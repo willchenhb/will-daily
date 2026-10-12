@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import WeeklyPlan from '@/components/WeeklyPlan'
+import WeeklyPlan, { type SavedPlan } from '@/components/WeeklyPlan'
+import { saveDoc, type SaveFlags } from '@/lib/save-doc'
 import Loading from '@/components/Loading'
 import { getWeekStart, getWeekEnd, getWeekNumber, getNextWeekStart, isFridayOrLater } from '@/lib/dates'
 
@@ -12,6 +13,7 @@ interface Plan {
   weekStart: string
   title: string | null
   content: string | null
+  updatedAt: string
   todos: { id: number; text: string; completed: boolean; note: string | null; order: number }[]
 }
 
@@ -53,22 +55,10 @@ function WeeklyList() {
   useEffect(() => { fetchPlans() }, [fetchPlans])
 
   // Called by autosave: no refetch, which would remount the plan being edited
-  const handleSave = async (data: { id?: number; weekStart: string; content?: string }): Promise<number> => {
-    const res = data.id
-      ? await fetch(`/api/weekly/${data.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: data.content }),
-        })
-      : await fetch('/api/weekly', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ weekStart: data.weekStart, content: data.content }),
-        })
-    if (!res.ok) throw new Error('保存失败')
-    const plan = await res.json()
-    return plan.id
-  }
+  const handleSave = ({ id, weekStart, ...rest }: { id?: number; weekStart: string; content?: string } & SaveFlags): Promise<SavedPlan> =>
+    id
+      ? saveDoc<SavedPlan>(`/api/weekly/${id}`, rest)
+      : saveDoc<SavedPlan>('/api/weekly', { weekStart, content: rest.content }, 'POST')
 
   if (loading) return <div className="max-w-3xl mx-auto px-8 py-6"><Loading /></div>
 
@@ -122,6 +112,7 @@ function WeeklyList() {
             weekStart={plan.weekStart}
             weekLabel={weekLabel(plan.weekStart)}
             content={plan.content || ''}
+            updatedAt={plan.updatedAt}
             todos={plan.todos}
             isCurrent={plan.weekStart === currentWeekStart}
             isNext={plan.weekStart === nextWeekStart}

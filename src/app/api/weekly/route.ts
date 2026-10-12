@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { parseBody, badRequest } from '@/lib/api-utils'
+import { normalizeWikiLabels } from '@/lib/wiki-sync'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
   }
 
   const plan = await prisma.weeklyPlan.create({
-    data: { weekStart, title: title || null, content: content || null },
+    data: { weekStart, title: title || null, content: content ? await normalizeWikiLabels(content) : null },
     include: { todos: true },
   })
 
