@@ -205,7 +205,7 @@ export default function Sidebar() {
               }`}
             >
               <span className="text-[15px]">❓</span>
-              <span>使用说明</span>
+              <span>说明</span>
             </Link>
             <Link
               href="/settings"
@@ -309,7 +309,7 @@ export default function Sidebar() {
       <div className="px-2 mb-1">
         <Link
           href="/help"
-          title="使用说明"
+          title="说明"
           className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] transition-colors ${
             pathname === '/help'
               ? 'bg-[#eef5ee] text-[#3a7a4f] font-medium'
@@ -317,7 +317,7 @@ export default function Sidebar() {
           }`}
         >
           <span className="text-[15px]">❓</span>
-          {!collapsed && <span>使用说明</span>}
+          {!collapsed && <span>说明</span>}
         </Link>
         <Link
           href="/settings"

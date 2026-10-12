@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 // mistakes the JSX in those tuples for un-keyed list items.
 /* eslint-disable react/jsx-key */
 
-export const metadata = { title: '使用说明 · Will Daily' }
+export const metadata = { title: '说明 · Will Daily' }
 
 function K({ children }: { children: ReactNode }) {
   return (
@@ -55,7 +55,7 @@ const TOC = [
 export default function HelpPage() {
   return (
     <div className="max-w-3xl mx-auto px-8 py-6">
-      <h1 className="text-lg font-semibold text-gray-800 mb-1">使用说明</h1>
+      <h1 className="text-lg font-semibold text-gray-800 mb-1">说明</h1>
       <p className="text-[12px] text-gray-400 mb-4">笔记、日记、周记共用同一个编辑器，下面的操作三处通用。Windows 上把 <K>⌘</K> 换成 <K>Ctrl</K>。</p>
 
       <nav className="flex flex-wrap gap-2 mb-6">
