@@ -22,14 +22,17 @@ interface AutosaveOptions<T> {
   // The baseline ("already saved") value is taken from the first enabled render
   enabled?: boolean
   delay?: number
+  // Continuous typing never pauses for `delay`; save at least this often while dirty
+  maxWait?: number
 }
 
 const RETRY_DELAY = 5000
 
-// Obsidian-style autosave: saves `delay` ms after the last change, serializes saves,
+// Obsidian-style autosave: saves `delay` ms after the last change (and at least every
+// `maxWait` ms while edits keep coming, like Obsidian's coalescing save timer), serializes saves,
 // retries failures, saves when the tab is hidden or the component unmounts, and warns
 // before unload while something is unsaved.
-export function useAutosave<T>({ value, save, canSave = () => true, enabled = true, delay = 1500 }: AutosaveOptions<T>) {
+export function useAutosave<T>({ value, save, canSave = () => true, enabled = true, delay = 1500, maxWait = 5000 }: AutosaveOptions<T>) {
   const key = JSON.stringify(value)
   const savedKeyRef = useRef<string | null>(null)
   if (enabled && savedKeyRef.current === null) savedKeyRef.current = key
@@ -43,6 +46,8 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
   const inFlight = useRef<Promise<void> | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const runRef = useRef<() => Promise<boolean>>(async () => true)
+  // When the oldest unsaved edit was made; bounds how long the debounce can keep slipping
+  const dirtySince = useRef<number | null>(null)
 
   // Save now if needed. Resolves true when everything is saved.
   const flush = useCallback(async (): Promise<boolean> => {
@@ -76,9 +81,11 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
     }
     if (latest.current.key !== savedKeyRef.current) {
       // Edited again while saving
+      dirtySince.current = Date.now()
       setStatus('dirty')
       timer.current = setTimeout(() => runRef.current(), delay)
     } else {
+      dirtySince.current = null
       setStatus('saved')
     }
     return true
@@ -89,13 +96,16 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
     if (!enabled || savedKeyRef.current === null || conflictRef.current) return
     if (key === savedKeyRef.current) {
       clearTimeout(timer.current)
+      dirtySince.current = null
       setStatus(s => (s === 'dirty' ? 'saved' : s))
       return
     }
     setStatus(s => (s === 'saving' ? s : 'dirty'))
+    if (dirtySince.current === null) dirtySince.current = Date.now()
+    const wait = Math.max(0, Math.min(delay, maxWait - (Date.now() - dirtySince.current)))
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => runRef.current(), delay)
-  }, [key, enabled, delay])
+    timer.current = setTimeout(() => runRef.current(), wait)
+  }, [key, enabled, delay, maxWait])
 
   useEffect(() => {
     const isUnsaved = () => savedKeyRef.current !== null && latest.current.key !== savedKeyRef.current
@@ -119,6 +129,7 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
   // Resolve a conflict by adopting `value` as the saved state (e.g. the server's version)
   const reset = useCallback((value: T) => {
     clearTimeout(timer.current)
+    dirtySince.current = null
     conflictRef.current = false
     setConflict(null)
     savedKeyRef.current = JSON.stringify(value)
