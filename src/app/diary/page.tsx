@@ -9,6 +9,7 @@ import Loading from '@/components/Loading'
 import DiaryCalendar from '@/components/DiaryCalendar'
 import { getToday, formatDate } from '@/lib/dates'
 import { internalHref } from '@/lib/wiki'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { saveDoc, type SaveFlags } from '@/lib/save-doc'
 import { applyDiaryTemplate } from '@/lib/diary-template'
 
@@ -175,7 +176,7 @@ function DiaryList() {
                   const href = internalHref(e.target)
                   if (href && !e.metaKey && !e.ctrlKey) { e.preventDefault(); router.push(href) }
                 }}
-                dangerouslySetInnerHTML={{ __html: entry.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.content) }}
               />
             </div>
           ) : (

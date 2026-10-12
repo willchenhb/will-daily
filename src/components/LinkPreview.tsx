@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { sanitizeHtml } from '@/lib/sanitize'
 
 interface Preview { id: number; title: string; content: string }
 
@@ -101,7 +102,7 @@ export default function LinkPreview() {
       <div
         className="font-content prose prose-sm max-w-none px-4 py-2 text-[13px] text-gray-600 overflow-hidden"
         style={{ maxHeight: CARD_MAX_HEIGHT - 40 }}
-        dangerouslySetInnerHTML={{ __html: preview.content || '<p class="text-gray-300">（空笔记）</p>' }}
+        dangerouslySetInnerHTML={{ __html: preview.content ? sanitizeHtml(preview.content) : '<p class="text-gray-300">（空笔记）</p>' }}
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white" />
     </div>

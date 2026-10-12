@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { DocType } from '@/lib/revisions-types'
+import { sanitizeHtml } from '@/lib/sanitize'
 
 interface RevisionSummary { id: number; title: string | null; createdAt: string; chars: number; preview: string }
 interface RevisionDetail { id: number; title: string | null; content: string; createdAt: string }
@@ -99,7 +100,7 @@ export default function RevisionHistory({ type, id, onRestore, onClose }: {
                   </div>
                   <div
                     className="flex-1 overflow-y-auto px-5 py-4 font-content prose prose-sm max-w-none text-gray-700"
-                    dangerouslySetInnerHTML={{ __html: selected.content }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content) }}
                   />
                 </>
               ) : (

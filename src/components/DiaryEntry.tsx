@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Editor from './Editor'
 import SaveStatus from './SaveStatus'
@@ -10,6 +10,7 @@ import { blockSaveForPendingImages, hasPendingImages } from '@/lib/editor-images
 import { useAutosave } from '@/lib/use-autosave'
 import { isEmptyHtml } from '@/lib/html'
 import { internalHref } from '@/lib/wiki'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { keepInHistory, type SaveFlags } from '@/lib/save-doc'
 
 export interface SavedEntry { id: number; content: string; updatedAt: string }
@@ -79,6 +80,7 @@ export default function DiaryEntry({ id, date, dateFormatted, content: initialCo
   }
 
   const docId = id ?? idRef.current
+  const safeContent = useMemo(() => sanitizeHtml(content), [content])
 
   const handleDone = async () => {
     if (isEmptyHtml(content)) {
@@ -158,7 +160,7 @@ export default function DiaryEntry({ id, date, dateFormatted, content: initialCo
             if ((e.target as HTMLElement).closest('a')) return
             setEditing(true)
           }}
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: safeContent }}
         />
       )}
 
