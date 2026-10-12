@@ -12,12 +12,16 @@ interface NoteItem {
   content: string
   category: string | null
   summary: string | null
+  pinnedAt: string | null
   createdAt: string
 }
+
+const PINNED = '\u0000pinned' // sentinel that can't clash with a category name
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<NoteItem[]>([])
   const [categories, setCategories] = useState<string[]>([])
+  // A category name, or PINNED for 收藏
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [hasApiKey, setHasApiKey] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -25,7 +29,8 @@ export default function NotesPage() {
   const router = useRouter()
 
   const fetchNotes = useCallback(async () => {
-    const params = activeCategory ? `?category=${encodeURIComponent(activeCategory)}` : ''
+    const params = activeCategory === PINNED ? '?pinned=1'
+      : activeCategory ? `?category=${encodeURIComponent(activeCategory)}` : ''
     const res = await fetch(`/api/notes${params}`)
     if (!res.ok) { setLoading(false); return }
     const data = await res.json()
@@ -83,6 +88,14 @@ export default function NotesPage() {
             }`}
           >
             全部
+          </button>
+          <button
+            onClick={() => setActiveCategory(PINNED)}
+            className={`text-[12px] px-2.5 py-1 rounded-full ${
+              activeCategory === PINNED ? 'bg-amber-50 text-amber-600' : 'bg-white text-gray-400 border border-gray-100'
+            }`}
+          >
+            ★ 收藏
           </button>
           {categories.map(cat => (
             <button

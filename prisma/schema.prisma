@@ -51,6 +51,7 @@ model Note {
   content   String
   category  String?  // Lowercase, trimmed
   summary   String?  // AI-generated
+  pinnedAt  DateTime? // 收藏 (bookmarked) time; null = not bookmarked
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

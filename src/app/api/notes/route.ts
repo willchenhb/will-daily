@@ -10,16 +10,19 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category')
   // ?q= filters by title (used by [[link]] suggestions) and lists recently edited first
   const q = searchParams.get('q')
+  // ?pinned=1 lists 收藏 (bookmarked) notes, most recently bookmarked first
+  const pinned = searchParams.get('pinned') === '1'
 
   const where = {
     ...(category && { category }),
     ...(q && { title: { contains: q.trim() } }),
+    ...(pinned && { pinnedAt: { not: null } }),
   }
 
   const [notes, total] = await Promise.all([
     prisma.note.findMany({
       where,
-      orderBy: q !== null ? { updatedAt: 'desc' } : { createdAt: 'desc' },
+      orderBy: pinned ? { pinnedAt: 'desc' } : q !== null ? { updatedAt: 'desc' } : { createdAt: 'desc' },
       skip: (page - 1) * size,
       take: size,
     }),

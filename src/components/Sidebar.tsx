@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { OPEN_SEARCH_EVENT } from './SearchPalette'
+import { BOOKMARKS_EVENT, fetchBookmarks, type Bookmark } from '@/lib/bookmarks'
 
 const openSearch = () => window.dispatchEvent(new Event(OPEN_SEARCH_EVENT))
 
@@ -32,6 +33,7 @@ export default function Sidebar() {
   const [isMobile, setIsMobile] = useState(false)
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
   const [authEnabled, setAuthEnabled] = useState(false)
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -77,6 +79,34 @@ export default function Sidebar() {
       })
       .catch(() => {})
   }, [pathname])
+
+  // 收藏: reload on navigation and whenever a note is (un)bookmarked
+  useEffect(() => {
+    if (pathname === '/login') return
+    const load = () => { fetchBookmarks().then(setBookmarks).catch(() => {}) }
+    load()
+    window.addEventListener(BOOKMARKS_EVENT, load)
+    return () => window.removeEventListener(BOOKMARKS_EVENT, load)
+  }, [pathname])
+
+  const bookmarkList = (onNavigate?: () => void) => bookmarks.length > 0 && (
+    <div className="px-2 mt-3">
+      <div className="px-3 pb-1 text-[10px] text-gray-300 tracking-wider">★ 收藏</div>
+      {bookmarks.slice(0, 10).map(b => (
+        <Link
+          key={b.id}
+          href={`/notes/${b.id}`}
+          onClick={onNavigate}
+          title={b.title}
+          className={`block truncate px-3 py-1.5 rounded-lg text-[12px] transition-colors ${
+            pathname === `/notes/${b.id}` ? 'bg-[#eef5ee] text-[#3a7a4f]' : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          {b.title || '无标题'}
+        </Link>
+      ))}
+    </div>
+  )
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -161,6 +191,7 @@ export default function Sidebar() {
                 </Link>
               )
             })}
+            {bookmarkList(closeMobile)}
           </nav>
 
           <div className="px-2 mb-1">
@@ -260,6 +291,7 @@ export default function Sidebar() {
             </Link>
           )
         })}
+        {!collapsed && bookmarkList()}
       </nav>
 
       <div className="px-2 mb-1">

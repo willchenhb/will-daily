@@ -146,6 +146,14 @@ try {
   console.log('Added milestoneId column to TodoItem');
 }
 
+// Add pinnedAt (收藏) column to Note if missing
+try {
+  db.prepare('SELECT pinnedAt FROM Note LIMIT 1').get();
+} catch(e) {
+  db.exec('ALTER TABLE Note ADD COLUMN pinnedAt DATETIME');
+  console.log('Added pinnedAt column to Note');
+}
+
 // Create indexes
 const indexes = [
   'CREATE INDEX IF NOT EXISTS idx_todo_weekly ON TodoItem(weeklyPlanId)',
