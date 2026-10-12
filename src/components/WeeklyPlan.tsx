@@ -1,18 +1,20 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import TodoItem from './TodoItem'
 import Editor from './Editor'
 import SaveStatus from './SaveStatus'
 import ConflictNotice from './ConflictNotice'
 import RevisionHistory from './RevisionHistory'
+import DraftNotice from './DraftNotice'
 import { blockSaveForPendingImages, hasPendingImages } from '@/lib/editor-images'
 import { useAutosave } from '@/lib/use-autosave'
 import { isEmptyHtml } from '@/lib/html'
 import { internalHref } from '@/lib/wiki'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { keepInHistory, type SaveFlags } from '@/lib/save-doc'
+import { clearDraft, pendingDraft, type Draft } from '@/lib/drafts'
 
 export interface SavedPlan { id: number; content: string | null; updatedAt: string }
 
@@ -65,6 +67,15 @@ export default function WeeklyPlan({
   // Version being edited (server updatedAt), and flags for the next save
   const versionRef = useRef(updatedAt ?? null)
   const nextSaveFlags = useRef<SaveFlags>({})
+  // One plan per week, so the week identifies the draft (also before the first save)
+  const draftKey = `weekly:${weekStart}`
+  const [draft, setDraft] = useState<Draft<string> | null>(null)
+
+  useEffect(() => {
+    setDraft(pendingDraft<string>(draftKey, normalize(initialContent || '')))
+    // Only when the plan first appears; later edits are this component's own
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey])
 
   const remember = (saved: SavedPlan) => {
     planIdRef.current = saved.id
@@ -78,7 +89,22 @@ export default function WeeklyPlan({
       nextSaveFlags.current = {}
     },
     canSave: html => !hasPendingImages(html),
+    draftKey,
   })
+
+  const restoreDraft = () => {
+    if (!draft) return
+    nextSaveFlags.current = { snapshot: true }
+    setContent(draft.value)
+    setDraft(null)
+    setEditingContent(true)
+    setEditorKey(k => k + 1)
+  }
+
+  const discardDraft = () => {
+    clearDraft(draftKey)
+    setDraft(null)
+  }
 
   const loadLatest = () => {
     if (planIdRef.current) keepInHistory('weekly', planIdRef.current, content)
@@ -155,6 +181,7 @@ export default function WeeklyPlan({
       </div>
 
       {conflict !== null && <ConflictNotice onReload={loadLatest} onOverwrite={overwrite} />}
+      {draft && <DraftNotice savedAt={draft.savedAt} onRestore={restoreDraft} onDiscard={discardDraft} />}
 
       <div className="mb-4">
         {editingContent ? (

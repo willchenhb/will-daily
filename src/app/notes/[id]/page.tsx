@@ -7,11 +7,15 @@ import SaveStatus from '@/components/SaveStatus'
 import Backlinks from '@/components/Backlinks'
 import NoteOutline from '@/components/NoteOutline'
 import ConflictNotice from '@/components/ConflictNotice'
+import DraftNotice from '@/components/DraftNotice'
 import RevisionHistory from '@/components/RevisionHistory'
 import { hasPendingImages } from '@/lib/editor-images'
 import { useAutosave } from '@/lib/use-autosave'
 import { keepInHistory, saveDoc, type SaveFlags } from '@/lib/save-doc'
 import { setPinned } from '@/lib/bookmarks'
+import { clearDraft, pendingDraft, type Draft } from '@/lib/drafts'
+
+interface NoteFields { title: string; content: string; category: string }
 import Toast from '@/components/Toast'
 import Markdown from '@/components/Markdown'
 
@@ -46,6 +50,8 @@ export default function NoteDetailPage() {
   const versionRef = useRef<string | null>(null)
   const nextSaveFlags = useRef<SaveFlags>({})
   const editorBoxRef = useRef<HTMLDivElement>(null)
+  const draftKey = `note:${id}`
+  const [draft, setDraft] = useState<Draft<NoteFields> | null>(null)
 
   const fetchNote = useCallback(async () => {
     const res = await fetch(`/api/notes/${id}`)
@@ -55,6 +61,7 @@ export default function NoteDetailPage() {
     setTitle(data.title)
     setContent(data.content)
     setCategory(data.category || '')
+    setDraft(pendingDraft<NoteFields>(`note:${id}`, { title: data.title, content: data.content, category: data.category || '' }))
     setSavedTitle(data.title)
     setPinnedState(!!data.pinnedAt)
     versionRef.current = data.updatedAt
@@ -94,7 +101,24 @@ export default function NoteDetailPage() {
       setSavedTitle(saved.title)
     },
     canSave: v => !hasPendingImages(v.content),
+    draftKey,
   })
+
+  // Restoring saves the draft over the server version, which goes to history first
+  const restoreDraft = () => {
+    if (!draft) return
+    nextSaveFlags.current = { snapshot: true }
+    setTitle(draft.value.title)
+    setContent(draft.value.content)
+    setCategory(draft.value.category)
+    setDraft(null)
+    setEditorKey(k => k + 1)
+  }
+
+  const discardDraft = () => {
+    clearDraft(draftKey)
+    setDraft(null)
+  }
 
   // Conflict: take the server's version…
   const loadLatest = () => {
@@ -211,6 +235,7 @@ export default function NoteDetailPage() {
       </div>
 
       {conflict !== null && <ConflictNotice onReload={loadLatest} onOverwrite={overwrite} />}
+      {draft && <DraftNotice savedAt={draft.savedAt} onRestore={restoreDraft} onDiscard={discardDraft} />}
 
       <NoteOutline containerRef={editorBoxRef} version={`${editorKey}:${content}`} />
 

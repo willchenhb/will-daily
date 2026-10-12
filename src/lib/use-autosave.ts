@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { clearDraft, writeDraft } from './drafts'
 
 // idle: nothing edited yet · dirty: waiting for the debounce · saving · saved · error: retrying
 // conflict: the server holds a newer version; autosave pauses until reset() or retry()
@@ -24,6 +25,8 @@ interface AutosaveOptions<T> {
   delay?: number
   // Continuous typing never pauses for `delay`; save at least this often while dirty
   maxWait?: number
+  // Mirror unsaved edits to a local draft under this key (see src/lib/drafts.ts)
+  draftKey?: string
 }
 
 const RETRY_DELAY = 5000
@@ -32,13 +35,13 @@ const RETRY_DELAY = 5000
 // `maxWait` ms while edits keep coming, like Obsidian's coalescing save timer), serializes saves,
 // retries failures, saves when the tab is hidden or the component unmounts, and warns
 // before unload while something is unsaved.
-export function useAutosave<T>({ value, save, canSave = () => true, enabled = true, delay = 1500, maxWait = 5000 }: AutosaveOptions<T>) {
+export function useAutosave<T>({ value, save, canSave = () => true, enabled = true, delay = 1500, maxWait = 5000, draftKey }: AutosaveOptions<T>) {
   const key = JSON.stringify(value)
   const savedKeyRef = useRef<string | null>(null)
   if (enabled && savedKeyRef.current === null) savedKeyRef.current = key
 
-  const latest = useRef({ value, key, save, canSave })
-  latest.current = { value, key, save, canSave }
+  const latest = useRef({ value, key, save, canSave, draftKey })
+  latest.current = { value, key, save, canSave, draftKey }
 
   const [status, setStatus] = useState<SaveStatus>('idle')
   const [conflict, setConflict] = useState<unknown>(null)
@@ -86,6 +89,7 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
       timer.current = setTimeout(() => runRef.current(), delay)
     } else {
       dirtySince.current = null
+      if (latest.current.draftKey) clearDraft(latest.current.draftKey)
       setStatus('saved')
     }
     return true
@@ -96,16 +100,20 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
     if (!enabled || savedKeyRef.current === null || conflictRef.current) return
     if (key === savedKeyRef.current) {
       clearTimeout(timer.current)
+      // Edits undone back to the saved state: the draft is obsolete. Not on first load,
+      // where a draft from an earlier session may still be waiting to be restored.
+      if (draftKey && dirtySince.current !== null) clearDraft(draftKey)
       dirtySince.current = null
       setStatus(s => (s === 'dirty' ? 'saved' : s))
       return
     }
+    if (draftKey) writeDraft(draftKey, latest.current.value)
     setStatus(s => (s === 'saving' ? s : 'dirty'))
     if (dirtySince.current === null) dirtySince.current = Date.now()
     const wait = Math.max(0, Math.min(delay, maxWait - (Date.now() - dirtySince.current)))
     clearTimeout(timer.current)
     timer.current = setTimeout(() => runRef.current(), wait)
-  }, [key, enabled, delay, maxWait])
+  }, [key, enabled, delay, maxWait, draftKey])
 
   useEffect(() => {
     const isUnsaved = () => savedKeyRef.current !== null && latest.current.key !== savedKeyRef.current
@@ -130,6 +138,7 @@ export function useAutosave<T>({ value, save, canSave = () => true, enabled = tr
   const reset = useCallback((value: T) => {
     clearTimeout(timer.current)
     dirtySince.current = null
+    if (latest.current.draftKey) clearDraft(latest.current.draftKey)
     conflictRef.current = false
     setConflict(null)
     savedKeyRef.current = JSON.stringify(value)
