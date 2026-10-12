@@ -129,6 +129,7 @@ export default function SearchPalette() {
     { id: 'template', icon: '🧩', label: '编辑日记模板', keys: 'template moban', run: () => go('/settings#template') },
     { id: 'export', icon: '📦', label: '导出全部为 Markdown', keys: 'export markdown daochu obsidian', run: () => go('/settings#export') },
     { id: 'settings', icon: '⚙️', label: '设置', keys: 'settings shezhi', run: () => go('/settings') },
+    { id: 'help', icon: '❓', label: '使用说明 / 快捷键', keys: 'help shortcuts keys bangzhu shuoming kuaijiejian', run: () => go('/help') },
   ]
 
   const terms = searchText.toLowerCase().split(/\s+/).filter(Boolean)
