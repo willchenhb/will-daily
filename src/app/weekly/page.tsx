@@ -33,10 +33,15 @@ export default function WeeklyPage() {
   )
 }
 
+const PAGE_SIZE = 10
+const API_MAX_SIZE = 100
+
 function WeeklyList() {
   // ?week=YYYY-MM-DD (from search) shows just that week
   const weekFilter = useSearchParams().get('week')
   const [plans, setPlans] = useState<Plan[]>([])
+  const [total, setTotal] = useState(0)
+  const [limit, setLimit] = useState(PAGE_SIZE) // weeks loaded so far ("加载更多" adds a page)
   const [loading, setLoading] = useState(true)
   const currentWeekStart = getWeekStart()
   const nextWeekStart = getNextWeekStart()
@@ -44,13 +49,27 @@ function WeeklyList() {
   const currentExists = plans.some(p => p.weekStart === currentWeekStart)
   const nextExists = plans.some(p => p.weekStart === nextWeekStart)
 
+  // Reloads everything shown so far, so refreshes keep older pages
   const fetchPlans = useCallback(async () => {
-    const res = await fetch(weekFilter ? `/api/weekly?weekStart=${weekFilter}` : '/api/weekly')
-    if (!res.ok) { setLoading(false); return }
-    const data = await res.json()
-    setPlans(data.plans)
+    if (weekFilter) {
+      const res = await fetch(`/api/weekly?weekStart=${weekFilter}`)
+      if (res.ok) setPlans((await res.json()).plans)
+    } else {
+      const loaded: Plan[] = []
+      let count = 0
+      for (let page = 1; page <= Math.ceil(limit / API_MAX_SIZE); page++) {
+        const res = await fetch(`/api/weekly?page=${page}&size=${API_MAX_SIZE}`)
+        if (!res.ok) break
+        const data = await res.json()
+        loaded.push(...data.plans)
+        count = data.total
+        if (data.plans.length < API_MAX_SIZE) break
+      }
+      setPlans(loaded.slice(0, limit))
+      setTotal(count)
+    }
     setLoading(false)
-  }, [weekFilter])
+  }, [weekFilter, limit])
 
   useEffect(() => { fetchPlans() }, [fetchPlans])
 
@@ -122,6 +141,17 @@ function WeeklyList() {
           <div className="border-t border-gray-100 mb-6" />
         </div>
       ))}
+
+      {!weekFilter && plans.length < total && (
+        <div className="text-center">
+          <button
+            onClick={() => setLimit(l => l + PAGE_SIZE)}
+            className="text-[12px] text-gray-500 border border-gray-200 rounded px-4 py-1.5 hover:bg-gray-50"
+          >
+            加载更多（还有 {total - plans.length} 周）
+          </button>
+        </div>
+      )}
     </div>
   )
 }
