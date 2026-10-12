@@ -8,13 +8,18 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1)
   const size = Math.min(100, Math.max(1, parseInt(searchParams.get('size') || '20') || 20))
   const category = searchParams.get('category')
+  // ?q= filters by title (used by [[link]] suggestions) and lists recently edited first
+  const q = searchParams.get('q')
 
-  const where = category ? { category } : {}
+  const where = {
+    ...(category && { category }),
+    ...(q && { title: { contains: q.trim() } }),
+  }
 
   const [notes, total] = await Promise.all([
     prisma.note.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: q !== null ? { updatedAt: 'desc' } : { createdAt: 'desc' },
       skip: (page - 1) * size,
       take: size,
     }),

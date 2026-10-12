@@ -7,15 +7,18 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1)
   const size = Math.min(100, Math.max(1, parseInt(searchParams.get('size') || '10') || 10))
+  const weekStart = searchParams.get('weekStart')
+  const where = weekStart ? { weekStart } : {}
 
   const [plans, total] = await Promise.all([
     prisma.weeklyPlan.findMany({
+      where,
       orderBy: { weekStart: 'desc' },
       include: { todos: { orderBy: { order: 'asc' } } },
       skip: (page - 1) * size,
       take: size,
     }),
-    prisma.weeklyPlan.count(),
+    prisma.weeklyPlan.count({ where }),
   ])
 
   return NextResponse.json({ plans, total, page, size })

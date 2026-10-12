@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { propagateNoteTitle } from '@/lib/wiki-sync'
 import { parseId, parseBody, badRequest, notFound } from '@/lib/api-utils'
 
 export async function GET(
@@ -26,6 +27,9 @@ export async function PUT(
   if (!body) return badRequest('Invalid JSON body')
 
   try {
+    const previous = body.title !== undefined
+      ? await prisma.note.findUnique({ where: { id }, select: { title: true } })
+      : null
     const note = await prisma.note.update({
       where: { id },
       data: {
@@ -35,6 +39,7 @@ export async function PUT(
         ...(body.summary !== undefined && { summary: body.summary as string }),
       },
     })
+    if (previous && previous.title !== note.title) await propagateNoteTitle(id, note.title)
     return NextResponse.json(note)
   } catch (e: unknown) {
     if (e && typeof e === 'object' && 'code' in e && e.code === 'P2025') {
