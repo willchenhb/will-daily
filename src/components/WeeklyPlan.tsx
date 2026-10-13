@@ -10,6 +10,7 @@ import RevisionHistory from './RevisionHistory'
 import DraftNotice from './DraftNotice'
 import { blockSaveForPendingImages, hasPendingImages } from '@/lib/editor-images'
 import { useAutosave } from '@/lib/use-autosave'
+import { useDragSort } from '@/lib/use-drag-sort'
 import { isEmptyHtml } from '@/lib/html'
 import { internalHref } from '@/lib/wiki'
 import { sanitizeHtml } from '@/lib/sanitize'
@@ -59,6 +60,9 @@ export default function WeeklyPlan({
   const [content, setContent] = useState(initialContent || '')
   const [editingContent, setEditingContent] = useState(false)
   const [newTodo, setNewTodo] = useState('')
+  // Shown order of the todos; follows the server's list, and is updated right away on reorder
+  const [items, setItems] = useState(todos)
+  useEffect(() => setItems(todos), [todos])
   const [showHistory, setShowHistory] = useState(false)
   // Bumped to remount the editor with new content (restore, reload after conflict)
   const [editorKey, setEditorKey] = useState(0)
@@ -158,15 +162,31 @@ export default function WeeklyPlan({
     onRefresh()
   }
 
+  const reorder = async (next: Todo[]) => {
+    setItems(next)
+    const res = await fetch(`/api/weekly/${planIdRef.current}/todos`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: next.map(t => t.id) }),
+    }).catch(() => null)
+    if (!res?.ok) {
+      alert('调整顺序失败，已恢复原来的顺序')
+      onRefresh()
+    }
+  }
+
+  const { listRef, draggingId, handleProps, itemStyle } = useDragSort(items, reorder)
+
   return (
-    <div className="mb-8 group">
+    // Named group: the todo rows have hover actions of their own
+    <div className="mb-8 group/plan">
       <div className="flex items-center justify-between mb-4">
         <span className="text-[15px] font-semibold text-gray-700">{weekLabel}</span>
         <div className="flex items-center gap-2">
           {planIdRef.current && (
             <button
               onClick={() => setShowHistory(true)}
-              className="text-[11px] text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="text-[11px] text-gray-300 hover:text-gray-500 opacity-0 group-hover/plan:opacity-100 transition-opacity"
             >
               历史
             </button>
@@ -220,17 +240,39 @@ export default function WeeklyPlan({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-2.5">
-        {todos.map(todo => (
-          <TodoItem
+      <div ref={listRef} className={`flex flex-col gap-2.5 ${draggingId !== null ? 'select-none' : ''}`}>
+        {items.map(todo => (
+          <div
             key={todo.id}
-            id={todo.id}
-            text={todo.text}
-            completed={todo.completed}
-            note={todo.note}
-            weeklyPlanId={id!}
-            onUpdate={onRefresh}
-          />
+            style={itemStyle(todo.id)}
+            className={`relative group/row rounded ${draggingId === todo.id ? 'bg-white shadow-md' : ''}`}
+          >
+            {items.length > 1 && (
+              <button
+                type="button"
+                {...handleProps(todo.id)}
+                aria-label="拖动调整顺序"
+                title="拖动调整顺序（也可按 ↑↓）"
+                className={`absolute -left-6 top-0 h-[21px] w-6 flex items-center justify-center text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none select-none outline-none focus-visible:text-[#3a7a4f] transition-opacity ${
+                  draggingId === todo.id ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100'
+                }`}
+              >
+                <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" aria-hidden="true">
+                  <circle cx="2" cy="2" r="1.2" /><circle cx="6" cy="2" r="1.2" />
+                  <circle cx="2" cy="6" r="1.2" /><circle cx="6" cy="6" r="1.2" />
+                  <circle cx="2" cy="10" r="1.2" /><circle cx="6" cy="10" r="1.2" />
+                </svg>
+              </button>
+            )}
+            <TodoItem
+              id={todo.id}
+              text={todo.text}
+              completed={todo.completed}
+              note={todo.note}
+              weeklyPlanId={id!}
+              onUpdate={onRefresh}
+            />
+          </div>
         ))}
       </div>
 
